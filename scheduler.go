@@ -23,10 +23,19 @@ func ScheduleTasks(tasks []*Task) {
 		if err == nil {
 			tasks = remainingTasks
 			
+			log.Printf("Running task %v", task)
+
 			waitGroup.Add(1)
+			task.taskState = Running
+
 			go func() {
+				defer waitGroup.Done()
+
 				executeTask(waitGroup, task)
-				<-guard // consumes an item from the channel
+				<- guard // consumes an item from the channel
+
+				task.taskState = Complete
+				log.Printf("Completed task %v", task)
 			}()
 		} else {
 			if confirmThatAllTasksAreCompleted(tasks) {
@@ -45,7 +54,7 @@ func ScheduleTasks(tasks []*Task) {
 // if there is a task ready to run
 //   return (the task, the list with the task now removed, nil error)
 // else
-//   return (nil task, the original list, an error)
+//   return (nil task, the unmodified list, an error)
 func findFirstRunnableTask(tasks []*Task) (*Task, []*Task, error) {
 	for index, task := range tasks {
 		if task.canRun() {
@@ -65,11 +74,7 @@ func confirmThatAllTasksAreCompleted(tasks []*Task) bool {
 }
 
 func executeTask(waitGroup *sync.WaitGroup, task *Task) {
-	defer waitGroup.Done()
-
-	log.Printf("Running task %v", task)
-	task.taskState = Running
-
+	
 	switch task.taskType {
 	case Transcode:
 		time.Sleep(3 * time.Second)
@@ -79,8 +84,6 @@ func executeTask(waitGroup *sync.WaitGroup, task *Task) {
 		time.Sleep(2 * time.Second)
 	}
 
-	task.taskState = Complete
-	log.Printf("Completed task %v", task)
 }
 
 // efficient removal of item from list (does not preserve the order of the list)
