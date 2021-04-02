@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 	"time"
+	"math/rand"
 )
 
 func ScheduleTasks(tasks []*Task) {
@@ -22,7 +23,7 @@ func ScheduleTasks(tasks []*Task) {
 
 		if err == nil {
 			tasks = remainingTasks
-			
+
 			log.Printf("Running task %v", task)
 
 			waitGroup.Add(1)
@@ -32,7 +33,7 @@ func ScheduleTasks(tasks []*Task) {
 				defer waitGroup.Done()
 
 				executeTask(waitGroup, task)
-				<- guard // consumes an item from the channel
+				<-guard // consumes an item from the channel
 
 				task.taskState = Complete
 				log.Printf("Completed task %v", task)
@@ -74,16 +75,12 @@ func confirmThatAllTasksAreCompleted(tasks []*Task) bool {
 }
 
 func executeTask(waitGroup *sync.WaitGroup, task *Task) {
-	
-	switch task.taskType {
-	case Transcode:
-		time.Sleep(3 * time.Second)
-	case FixAudio:
-		time.Sleep(1 * time.Second)
-	case Concatenate:
-		time.Sleep(2 * time.Second)
-	}
+	rand.Seed(time.Now().UnixNano())
+    min := 1
+    max := 5
+    runTime := (rand.Intn(max - min + 1) + min)
 
+	time.Sleep(time.Duration(runTime) * time.Second)
 }
 
 // efficient removal of item from list (does not preserve the order of the list)

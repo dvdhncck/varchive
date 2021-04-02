@@ -2,7 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
+	"regexp"
 )
 
 type TaskState int
@@ -23,10 +27,10 @@ const (
 
 type Task struct {
 	taskState TaskState
-	taskType TaskType
+	taskType  TaskType
 
-	input    []string
-	output   []string
+	input  []string
+	output []string
 
 	dependsOn []*Task
 }
@@ -50,8 +54,19 @@ func (t *Task) canRun() bool {
 }
 
 func (t *Task) String() string {
-	common := fmt.Sprintf("  Completed? %v\n  Can run? %v\n  Depends on %v others",
-		t.taskState == Complete, t.canRun(), len(t.dependsOn))
+	
+	state := "Mysterious"
+	switch t.taskState {
+	case Running:
+		state = "Running"
+	case Pending:
+		if t.canRun() { state = "Runnable" } else { state = "Pending" }
+	case Complete:
+		state = "Complete"
+	}
+
+	common := fmt.Sprintf("  State: %s\n  Depends on %v others", 
+		state, len(t.dependsOn))
 
 	switch t.taskType {
 	case Transcode:
@@ -61,8 +76,8 @@ func (t *Task) String() string {
 		return fmt.Sprintf("FixAudio\n%v\n  From %v\n  To %v",
 			common, t.input[0], t.output[0])
 	case Concatenate:
-		return fmt.Sprintf("Concatenate\n%v",
-			common)
+		return fmt.Sprintf("Concatenate\n%v\n  Into %v",
+			common, t.output[0])
 	default:
 		return "?"
 	}
@@ -96,12 +111,12 @@ func GenerateTasks() []*Task {
 		concatenateDependees := []*Task{}
 
 		for _, fileIn1 := range files {
-			fileOut1 := fileIn1 + "_fixedaudio"
+			fileOut1 := makeTemporaryFile(".mp4")
 			task1 := NewFixAudioTask(fileIn1, fileOut1)
 			tasks = append(tasks, task1)
 
 			fileIn2 := fileOut1
-			fileOut2 := fileIn2 + "_transcoded"
+			fileOut2 := makeTemporaryFile(".mp4")
 			task2 := NewTranscodeTask(fileIn2, fileOut2)
 			task2.addDependant(task1)
 			tasks = append(tasks, task2)
@@ -109,10 +124,24 @@ func GenerateTasks() []*Task {
 			concatenateDependees = append(concatenateDependees, task2)
 		}
 
-		finalFileOut := path + "_concatenated"
+		finalFileOut := filepath.Join(settings.outputRoot, sanitise(path)+".mp4")
 		finalTask := NewConcatenateTask(finalFileOut, concatenateDependees)
 		tasks = append(tasks, finalTask)
 	}
 
 	return tasks
+}
+
+func sanitise(path string) string {
+	re := regexp.MustCompile(`\s+`)
+	return re.ReplaceAllString(path, ``)
+}
+
+func makeTemporaryFile(extension string) string {
+	file, err := ioutil.TempFile("", "varchive.*"+extension)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+	return file.Name()
 }

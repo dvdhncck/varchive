@@ -14,6 +14,8 @@ type Settings struct {
 	verbose    bool
 	singleThread bool
 
+	outputRoot string
+
 	maxParallelTasks int
 
 	encodeMode string
@@ -41,6 +43,9 @@ func ParseArguments() *Settings {
 
 	flag.StringVar(&settings.encodeMode, "encodeMode", "",
 		fmt.Sprintf("encode mode.\nValid modes: %s", validEncodeModeString))
+
+	flag.StringVar(&settings.outputRoot, "outputRoot", "varchive",
+		fmt.Sprint("location for output files.\n  Default is './varchive'"))
 
 	flag.Parse()
 
