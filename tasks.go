@@ -31,6 +31,10 @@ type Task struct {
 	dependsOn []*Task
 }
 
+func (t *Task) isNotCompleted() bool {
+	return t.taskState != Complete
+}
+
 func (t *Task) canRun() bool {
 	if t.taskState != Pending {
 		return false
@@ -41,7 +45,7 @@ func (t *Task) canRun() bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -57,7 +61,7 @@ func (t *Task) String() string {
 		return fmt.Sprintf("FixAudio\n%v\n  From %v\n  To %v",
 			common, t.input[0], t.output[0])
 	case Concatenate:
-		return fmt.Sprintf("Concatenated\n%v",
+		return fmt.Sprintf("Concatenate\n%v",
 			common)
 	default:
 		return "?"
