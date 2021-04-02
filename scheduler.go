@@ -1,11 +1,9 @@
 package main
 
 import (
-	"errors"
 	"log"
 	"sync"
 	"time"
-	//"math/rand"
 )
 
 func ScheduleTasks(tasks []*Task) {
@@ -19,11 +17,9 @@ func ScheduleTasks(tasks []*Task) {
 
 		guard <- 1 // blocks if the channel is full (i.e. enough go routines are running)
 
-		task, remainingTasks, err := findFirstRunnableTask(tasks)
+		task := findFirstRunnableTask(tasks)
 
-		if err == nil {
-			tasks = remainingTasks
-
+		if task != nil {
 			log.Printf("Running task %v", task)
 
 			waitGroup.Add(1)
@@ -40,9 +36,9 @@ func ScheduleTasks(tasks []*Task) {
 
 				task.taskState = Complete
 
-				elapsed := time.Since(start)
+				task.runTime = time.Since(start)
 
-				log.Printf("Completed task %d in %v", task.id, time.Duration(elapsed))
+				log.Printf("Completed task %d in %v", task.id, task.runTime)
 			}()
 		} else {
 			if confirmThatAllTasksAreCompleted(tasks) {
@@ -56,19 +52,21 @@ func ScheduleTasks(tasks []*Task) {
 	}
 
 	waitGroup.Wait() // hang on until the last go routine checks in
+
+	totalTime := time.Duration(0)
+	for _, task := range tasks {
+		totalTime += task.runTime
+	}
+	log.Printf("Total compute time %v", totalTime)
 }
 
-// if there is a task ready to run
-//   return (the task, the list with the task now removed, nil error)
-// else
-//   return (nil task, the unmodified list, an error)
-func findFirstRunnableTask(tasks []*Task) (*Task, []*Task, error) {
-	for index, task := range tasks {
+func findFirstRunnableTask(tasks []*Task) *Task {
+	for _, task := range tasks {
 		if task.canRun() {
-			return task, remove(tasks, index), nil
+			return task
 		}
 	}
-	return nil, tasks, errors.New("no task available")
+	return nil
 }
 
 func confirmThatAllTasksAreCompleted(tasks []*Task) bool {
@@ -80,17 +78,8 @@ func confirmThatAllTasksAreCompleted(tasks []*Task) bool {
 	return true
 }
 
-// func executeTask(waitGroup *sync.WaitGroup, task *Task) {
-// 	rand.Seed(time.Now().UnixNano())
-//     min := 1
-//     max := 5
-//     runTime := (rand.Intn(max - min + 1) + min)
-
-// 	time.Sleep(time.Duration(runTime) * time.Second)
-// }
-
 // efficient removal of item from list (does not preserve the order of the list)
-func remove(s []*Task, i int) []*Task {
-	s[i] = s[len(s)-1]
-	return s[:len(s)-1]
-}
+// func remove(s []*Task, i int) []*Task {
+// 	s[i] = s[len(s)-1]
+// 	return s[:len(s)-1]
+// }

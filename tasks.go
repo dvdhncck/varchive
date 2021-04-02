@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	//"regexp"
+	"time"
 )
 
 type TaskState int
@@ -28,7 +28,7 @@ const (
 type Task struct {
 	id int
 
-	runTimeMillis int
+	runTime time.Duration
 
 	taskState TaskState
 	taskType  TaskType
