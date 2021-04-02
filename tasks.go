@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
+	//"regexp"
 )
 
 type TaskState int
@@ -26,14 +26,20 @@ const (
 )
 
 type Task struct {
+	id int
+
+	runTimeMillis int
+
 	taskState TaskState
 	taskType  TaskType
 
-	input  []string
-	output []string
+	fileIn  string
+	fileOut string
 
 	dependsOn []*Task
 }
+
+var taskId = 1
 
 func (t *Task) isNotCompleted() bool {
 	return t.taskState != Complete
@@ -55,29 +61,26 @@ func (t *Task) canRun() bool {
 
 func (t *Task) String() string {
 	
-	state := "Mysterious"
+	state := "?"
 	switch t.taskState {
 	case Running:
 		state = "Running"
 	case Pending:
-		if t.canRun() { state = "Runnable" } else { state = "Pending" }
+		if t.canRun() { state = "Runnable" } else { state = fmt.Sprintf("Pending (%d dependees)", len(t.dependsOn)) }
 	case Complete:
 		state = "Complete"
 	}
 
-	common := fmt.Sprintf("  State: %s\n  Depends on %v others", 
-		state, len(t.dependsOn))
-
 	switch t.taskType {
 	case Transcode:
-		return fmt.Sprintf("Transcode\n%v\n  From %v\n  To %v",
-			common, t.input[0], t.output[0])
+		return fmt.Sprintf("%d\n  Type: Transcode\n  State: %s\n  From: %s\n  To: %s",
+			t.id, state, t.fileIn, t.fileOut)
 	case FixAudio:
-		return fmt.Sprintf("FixAudio\n%v\n  From %v\n  To %v",
-			common, t.input[0], t.output[0])
+		return fmt.Sprintf("%d\n  Type: FixAudio\n  State: %s\n  From: %s\n  To: %s",
+			t.id, state, t.fileIn, t.fileOut)
 	case Concatenate:
-		return fmt.Sprintf("Concatenate\n%v\n  Into %v",
-			common, t.output[0])
+		return fmt.Sprintf("%d\n  Type: Concatenate\n  State: %s\n  To: %s",
+			t.id, state, t.fileOut)
 	default:
 		return "?"
 	}
@@ -87,19 +90,34 @@ func (t *Task) addDependant(other *Task) {
 	t.dependsOn = append(t.dependsOn, other)
 }
 
+func (t *Task) addDependants(others []*Task) {
+	t.dependsOn = append(t.dependsOn, others...)
+}
+
+
+func NewTask(taskType TaskType, fileIn string, fileOut string) *Task {
+	task := Task{taskId, 0, Pending, taskType, fileIn, fileOut, []*Task{}}
+	taskId += 1
+	return &task
+}
+
 func NewFixAudioTask(fileIn string, fileOut string) *Task {
-	return &Task{Pending, FixAudio, []string{fileIn}, []string{fileOut}, []*Task{}}
+	return NewTask(FixAudio, fileIn, fileOut)
 }
 
 func NewTranscodeTask(fileIn string, fileOut string) *Task {
-	return &Task{Pending, Transcode, []string{fileIn}, []string{fileOut}, []*Task{}}
+	return NewTask(Transcode, fileIn, fileOut)
 }
 
 func NewConcatenateTask(fileOut string, dependsOn []*Task) *Task {
-	return &Task{Pending, Concatenate, nil, []string{fileOut}, dependsOn}
+	task := NewTask(Concatenate, "", fileOut)
+	task.addDependants(dependsOn)
+	return task
 }
 
 func GenerateTasks() []*Task {
+	
+	createOutputRootIfRequired()
 
 	tasks := []*Task{}
 
@@ -123,8 +141,14 @@ func GenerateTasks() []*Task {
 
 			concatenateDependees = append(concatenateDependees, task2)
 		}
+	
+		finalFileName := lastBitOfPath(path)
+		finalFileOut := filepath.Join(settings.outputRoot, sanitisePath(finalFileName)+".mp4")
+		//finalFileOut = makeTemporaryFile(".mp4")
 
-		finalFileOut := filepath.Join(settings.outputRoot, sanitise(path)+".mp4")
+		failIfConcatenationFileAlreadyExists(finalFileOut)
+
+
 		finalTask := NewConcatenateTask(finalFileOut, concatenateDependees)
 		tasks = append(tasks, finalTask)
 	}
@@ -132,15 +156,35 @@ func GenerateTasks() []*Task {
 	return tasks
 }
 
-func sanitise(path string) string {
-	re := regexp.MustCompile(`\s+`)
-	return re.ReplaceAllString(path, ``)
+func createOutputRootIfRequired() {
+	if _, err := os.Stat(settings.outputRoot); err != nil {
+		if os.IsNotExist(err) {
+			os.Mkdir(settings.outputRoot, 0755)
+	  }
+	}
+}
+
+func failIfConcatenationFileAlreadyExists(path string) {
+	if _, err := os.Stat(path); err == nil {
+		fatal(fmt.Sprintf("%s exists, will not overwrite", path))
+	  }
+}
+
+func lastBitOfPath(path string) string {
+	return filepath.Base(path)
+}
+
+// do we actually need this? if we use os.Command, daft filenames should not be a problem
+func sanitisePath(path string) string {
+	// re := regexp.MustCompile(`\s+`)
+	// return re.ReplaceAllString(path, ``)
+	return path
 }
 
 func makeTemporaryFile(extension string) string {
 	file, err := ioutil.TempFile("", "varchive.*"+extension)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err.Error())
 	}
 	defer os.Remove(file.Name())
 	return file.Name()

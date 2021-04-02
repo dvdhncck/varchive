@@ -5,7 +5,7 @@ import (
 	"log"
 	"sync"
 	"time"
-	"math/rand"
+	//"math/rand"
 )
 
 func ScheduleTasks(tasks []*Task) {
@@ -32,11 +32,17 @@ func ScheduleTasks(tasks []*Task) {
 			go func() {
 				defer waitGroup.Done()
 
-				executeTask(waitGroup, task)
-				<-guard // consumes an item from the channel
+				start := time.Now()
+
+				ExecuteTask(task)
+				
+				<-guard // consume an item from the channel, allowing another go routine to start
 
 				task.taskState = Complete
-				log.Printf("Completed task %v", task)
+
+				elapsed := time.Since(start)
+
+				log.Printf("Completed task %d in %v", task.id, time.Duration(elapsed))
 			}()
 		} else {
 			if confirmThatAllTasksAreCompleted(tasks) {
@@ -74,14 +80,14 @@ func confirmThatAllTasksAreCompleted(tasks []*Task) bool {
 	return true
 }
 
-func executeTask(waitGroup *sync.WaitGroup, task *Task) {
-	rand.Seed(time.Now().UnixNano())
-    min := 1
-    max := 5
-    runTime := (rand.Intn(max - min + 1) + min)
+// func executeTask(waitGroup *sync.WaitGroup, task *Task) {
+// 	rand.Seed(time.Now().UnixNano())
+//     min := 1
+//     max := 5
+//     runTime := (rand.Intn(max - min + 1) + min)
 
-	time.Sleep(time.Duration(runTime) * time.Second)
-}
+// 	time.Sleep(time.Duration(runTime) * time.Second)
+// }
 
 // efficient removal of item from list (does not preserve the order of the list)
 func remove(s []*Task, i int) []*Task {

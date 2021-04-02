@@ -45,7 +45,7 @@ func ParseArguments() *Settings {
 		fmt.Sprintf("encode mode.\nValid modes: %s", validEncodeModeString))
 
 	flag.StringVar(&settings.outputRoot, "outputRoot", "varchive",
-		fmt.Sprint("location for output files.\n  Default is './varchive'"))
+		"location for output files.\n  Default is './varchive'")
 
 	flag.Parse()
 
@@ -64,7 +64,7 @@ func ParseArguments() *Settings {
 	}
 
 	if settings.dryRun {
-		log.Print("DRY RUN")
+		log.Print("Dry run mode enabled")
 	}
 	
 	if settings.encodeMode == "" {
