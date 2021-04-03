@@ -38,7 +38,9 @@ func ScheduleTasks(tasks []*Task) {
 
 				task.runTime = time.Since(taskStartTime)
 
-				log.Printf("Completed task %d in %v", task.id, task.runTime)
+				runTimeInSeconds := task.runTime.Seconds()
+				bytesPerSecond := float64(task.inputSize) / float64(runTimeInSeconds)
+				log.Printf("Completed task %s in %v (%v/s)", task.BriefString(), task.runTime, niceSize(int64(bytesPerSecond)))
 			}()
 		} else {
 			if confirmThatAllTasksAreCompleted(tasks) {
@@ -61,6 +63,8 @@ func ScheduleTasks(tasks []*Task) {
 		totalTime += task.runTime
 	}
 	log.Printf("Total compute time: %v", totalTime)
+
+	log.Printf("Speedup: %.2f", float64(time.Duration(totalTime.Milliseconds())) / float64(time.Duration(runTime.Milliseconds())))
 
 }
 

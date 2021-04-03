@@ -27,7 +27,7 @@ func doTranscode(task *Task) {
 
 func doFixAudio(task *Task) {
 	audioStream := makeTemporaryFile(".mp3")
-	videoStream := makeTemporaryFile(".mp2")
+	videoStream := makeTemporaryFile(".mov")    // TODO - perhaps match the original file extension to avoid confusing ffmpeg
 
 	// demux the video stream (leave encoding as is)
 	args := []string{
@@ -53,6 +53,8 @@ func doFixAudio(task *Task) {
 		"-i", audioStream,
 		"-map", "0:v:0",
 		"-map", "1:a:0",
+		"-acodec", "copy",
+		"-vcodec", "copy",
 		"-shortest",
 		task.fileOut}
 
