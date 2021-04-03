@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 )
 
 type FileWithSize struct {
@@ -52,8 +51,6 @@ func ScanPaths() map[string]FilesWithSize {
 		} else {
 			fatal(fmt.Sprintf("Only paths can be specified, %v is a file", path))
 		}
-
-		sort.Slice(filesForPath, func(i,j int) bool { return filesForPath[i].size < filesForPath[j].size })
 
 		pathsAndFiles[path] = filesForPath
 	}

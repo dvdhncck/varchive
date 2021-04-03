@@ -22,6 +22,8 @@ func main() {
 
 	tasks := GenerateTasks()
 
+	SortTasks(tasks)
+	
 	if settings.verbose {
 		for _, task := range tasks {
 			log.Printf("%v\n\n", task)
