@@ -60,13 +60,17 @@ func (t *Task) canRun() bool {
 }
 
 func (t *Task) String() string {
-	
+
 	state := "?"
 	switch t.taskState {
 	case Running:
 		state = "Running"
 	case Pending:
-		if t.canRun() { state = "Runnable" } else { state = fmt.Sprintf("Pending (%d dependees)", len(t.dependsOn)) }
+		if t.canRun() {
+			state = "Runnable"
+		} else {
+			state = fmt.Sprintf("Pending (%d dependees)", len(t.dependsOn))
+		}
 	case Complete:
 		state = "Complete"
 	}
@@ -94,7 +98,6 @@ func (t *Task) addDependants(others []*Task) {
 	t.dependsOn = append(t.dependsOn, others...)
 }
 
-
 func NewTask(taskType TaskType, fileIn string, fileOut string) *Task {
 	task := Task{taskId, 0, Pending, taskType, fileIn, fileOut, []*Task{}}
 	taskId += 1
@@ -116,7 +119,7 @@ func NewConcatenateTask(fileOut string, dependsOn []*Task) *Task {
 }
 
 func GenerateTasks() []*Task {
-	
+
 	createOutputRootIfRequired()
 
 	tasks := []*Task{}
@@ -128,26 +131,30 @@ func GenerateTasks() []*Task {
 
 		concatenateDependees := []*Task{}
 
-		for _, fileIn1 := range files {
-			fileOut1 := makeTemporaryFile(".mp4")
-			task1 := NewFixAudioTask(fileIn1, fileOut1)
-			tasks = append(tasks, task1)
+		for _, file := range files {
 
-			fileIn2 := fileOut1
-			fileOut2 := makeTemporaryFile(".mp4")
-			task2 := NewTranscodeTask(fileIn2, fileOut2)
-			task2.addDependant(task1)
-			tasks = append(tasks, task2)
+			fileIn := file
+			fileOut := makeTemporaryFile(".mp4")
+			transcodeTask := NewTranscodeTask(fileIn, fileOut)
+			tasks = append(tasks, transcodeTask)
 
-			concatenateDependees = append(concatenateDependees, task2)
+			if settings.fixAudio {			
+				fixAudioFileOut := makeTemporaryFile(".mp4")
+				fixAudioTask := NewFixAudioTask(fileIn, fixAudioFileOut)				
+				
+				transcodeTask.fileIn = fixAudioFileOut
+				transcodeTask.addDependant(fixAudioTask)
+
+				tasks = append(tasks, fixAudioTask)
+			} 
+						
+			concatenateDependees = append(concatenateDependees, transcodeTask)
 		}
-	
+
 		finalFileName := lastBitOfPath(path)
 		finalFileOut := filepath.Join(settings.outputRoot, sanitisePath(finalFileName)+".mp4")
-		//finalFileOut = makeTemporaryFile(".mp4")
 
 		failIfConcatenationFileAlreadyExists(finalFileOut)
-
 
 		finalTask := NewConcatenateTask(finalFileOut, concatenateDependees)
 		tasks = append(tasks, finalTask)
@@ -160,14 +167,14 @@ func createOutputRootIfRequired() {
 	if _, err := os.Stat(settings.outputRoot); err != nil {
 		if os.IsNotExist(err) {
 			os.Mkdir(settings.outputRoot, 0755)
-	  }
+		}
 	}
 }
 
 func failIfConcatenationFileAlreadyExists(path string) {
 	if _, err := os.Stat(path); err == nil {
 		fatal(fmt.Sprintf("%s exists, will not overwrite", path))
-	  }
+	}
 }
 
 func lastBitOfPath(path string) string {
@@ -189,7 +196,6 @@ func makeTemporaryFile(extension string) string {
 	defer os.Remove(file.Name())
 	return file.Name()
 }
-
 
 func removeTemporaryFile(path string) {
 	// ignore any errors (which will probably be "file not found")

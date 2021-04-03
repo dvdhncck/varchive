@@ -20,6 +20,9 @@ func doTranscode(task *Task) {
 		"2>&1"}
 
 	invoke("HandBrakeCLI", args)
+
+	// we dont know for sure whether the input is a temp file or not...
+	//removeTemporaryFile(task.fileIn)
 }
 
 func doFixAudio(task *Task) {
@@ -90,7 +93,10 @@ func doConcatenate(task *Task) {
 
 	invoke("ffmpeg", args)
 
-	// TODO: remove all of the fileOuts from the dependees
+	// we are pretty sure that all of the inputs will be temporary files
+	for _, dependee := range task.dependsOn {
+		removeTemporaryFile(dependee.fileOut)
+	}
 
 	removeTemporaryFile(listFile)
 }
