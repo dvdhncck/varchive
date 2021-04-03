@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 )
 
@@ -20,8 +21,9 @@ const (
 type TaskType int
 
 const (
-	Transcode   TaskType = 1
-	FixAudio    TaskType = 2
+	// note that the ordering defines the 'priority' of a task when we schedule them
+	FixAudio    TaskType = 1
+	Transcode   TaskType = 2
 	Concatenate TaskType = 3
 )
 
@@ -45,6 +47,14 @@ var taskId = 1
 
 func (t *Task) isNotCompleted() bool {
 	return t.taskState != Complete
+}
+
+func (t1 *Task) lessThan(t2 *Task) bool {
+	if t1.taskType == t2.taskType {
+		return t1.inputSize > t2.inputSize // biggest jobs ones come first
+	} else {
+		return t1.taskType < t2.taskType // higher priority comes first, e.g. FixAudio before Transcode before Concatenate
+	}
 }
 
 func (t *Task) canRun() bool {
@@ -146,26 +156,26 @@ func GenerateTasks() []*Task {
 		log.Printf("%s : %v", path, files)
 
 		concatenateDependees := []*Task{}
-		
+
 		for _, file := range files {
 
 			fileIn := file
 			fileOut := makeTemporaryFile(".mp4")
 			transcodeTask := NewTranscodeTask(fileIn.path, fileOut)
-			transcodeTask.inputSize = fileIn.size	
+			transcodeTask.inputSize = fileIn.size
 			tasks = append(tasks, transcodeTask)
 
-			if settings.fixAudio {			
+			if settings.fixAudio {
 				fixAudioFileOut := makeTemporaryFile(".mp4")
-				fixAudioTask := NewFixAudioTask(fileIn.path, fixAudioFileOut)				
+				fixAudioTask := NewFixAudioTask(fileIn.path, fixAudioFileOut)
 				fixAudioTask.inputSize = fileIn.size
 
 				transcodeTask.fileIn = fixAudioFileOut
 				transcodeTask.addDependant(fixAudioTask)
 
 				tasks = append(tasks, fixAudioTask)
-			} 
-						
+			}
+
 			concatenateDependees = append(concatenateDependees, transcodeTask)
 		}
 
@@ -179,6 +189,13 @@ func GenerateTasks() []*Task {
 	}
 
 	return tasks
+}
+
+// put the FixAudio tasks at the front of the queue, ordered by the
+// size of their inputs, then Transcode tasks, again, order by input size
+//
+func SortTasks(tasks []*Task) {
+	sort.Slice(tasks, func(i1, i2 int) bool { return tasks[i1].lessThan(tasks[i2]) })
 }
 
 func createOutputRootIfRequired() {
@@ -222,14 +239,14 @@ func removeTemporaryFile(path string) {
 
 func niceSize(bytes int64) string {
 	const unit = 1024
-    if bytes < unit {
-        return fmt.Sprintf("%d B", bytes)
-    }
-    div, exp := int64(unit), 0
-    for n := bytes / unit; n >= unit; n /= unit {
-        div *= unit
-        exp++
-    }
-    return fmt.Sprintf("%.1f %ciB",
-        float64(bytes)/float64(div), "KMGTPE"[exp])
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB",
+		float64(bytes)/float64(div), "KMGTPE"[exp])
 }
