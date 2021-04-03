@@ -189,3 +189,9 @@ func makeTemporaryFile(extension string) string {
 	defer os.Remove(file.Name())
 	return file.Name()
 }
+
+
+func removeTemporaryFile(path string) {
+	// ignore any errors (which will probably be "file not found")
+	os.Remove(path)
+}

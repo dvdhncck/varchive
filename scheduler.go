@@ -9,7 +9,7 @@ import (
 func ScheduleTasks(tasks []*Task) {
 
 	completed := false
-
+	startTime := time.Now()
 	waitGroup := new(sync.WaitGroup)
 	guard := make(chan int, settings.maxParallelTasks)
 
@@ -28,7 +28,7 @@ func ScheduleTasks(tasks []*Task) {
 			go func() {
 				defer waitGroup.Done()
 
-				start := time.Now()
+				taskStartTime := time.Now()
 
 				ExecuteTask(task)
 				
@@ -36,7 +36,7 @@ func ScheduleTasks(tasks []*Task) {
 
 				task.taskState = Complete
 
-				task.runTime = time.Since(start)
+				task.runTime = time.Since(taskStartTime)
 
 				log.Printf("Completed task %d in %v", task.id, task.runTime)
 			}()
@@ -53,11 +53,15 @@ func ScheduleTasks(tasks []*Task) {
 
 	waitGroup.Wait() // hang on until the last go routine checks in
 
+	runTime := time.Since(startTime)
+	log.Printf("Elapsed (real) time: %v", runTime)
+
 	totalTime := time.Duration(0)
 	for _, task := range tasks {
 		totalTime += task.runTime
 	}
-	log.Printf("Total compute time %v", totalTime)
+	log.Printf("Total compute time: %v", totalTime)
+
 }
 
 func findFirstRunnableTask(tasks []*Task) *Task {
