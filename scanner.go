@@ -5,11 +5,19 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
-func ScanPaths() map[string][]string {
+type FileWithSize struct {
+	path string
+	size int64
+}
 
-	pathsAndFiles := make(map[string][]string)
+type FilesWithSize []*FileWithSize
+
+func ScanPaths() map[string]FilesWithSize {
+
+	pathsAndFiles := make(map[string]FilesWithSize)
 
 	for _, path := range settings.paths {
 
@@ -20,7 +28,7 @@ func ScanPaths() map[string][]string {
 			log.Fatal(err)
 		}
 
-		filesForPath := []string{}
+		filesForPath := FilesWithSize{}
 
 		if fileInfo.IsDir() {
 			log.Printf("%s is a directory\n", path)
@@ -30,7 +38,7 @@ func ScanPaths() map[string][]string {
 						if fileInfo.IsDir() {
 							fatal(fmt.Sprintf("Recursive directories are not handled (%v)", walkedPath))
 						} else {
-							filesForPath = append(filesForPath, walkedPath)
+							filesForPath = append(filesForPath, &FileWithSize{walkedPath, fileInfo.Size()})
 						}
 					} else {
 						return err
@@ -45,8 +53,12 @@ func ScanPaths() map[string][]string {
 			fatal(fmt.Sprintf("Only paths can be specified, %v is a file", path))
 		}
 
+		sort.Slice(filesForPath, func(i,j int) bool { return filesForPath[i].size < filesForPath[j].size })
+
 		pathsAndFiles[path] = filesForPath
 	}
 
 	return pathsAndFiles
+
 }
+

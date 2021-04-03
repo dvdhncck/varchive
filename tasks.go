@@ -28,6 +28,8 @@ const (
 type Task struct {
 	id int
 
+	inputSize int64
+
 	runTime time.Duration
 
 	taskState TaskState
@@ -90,6 +92,20 @@ func (t *Task) String() string {
 	}
 }
 
+func (t *Task) BriefString() string {
+
+	switch t.taskType {
+	case Transcode:
+		return fmt.Sprintf("#%d Transcode %v", t.id, niceSize(t.inputSize))
+	case FixAudio:
+		return fmt.Sprintf("#%d FixAudio %v", t.id, niceSize(t.inputSize))
+	case Concatenate:
+		return fmt.Sprintf("#%d Concatenate %d items", t.id, len(t.dependsOn))
+	default:
+		return "?"
+	}
+}
+
 func (t *Task) addDependant(other *Task) {
 	t.dependsOn = append(t.dependsOn, other)
 }
@@ -99,7 +115,7 @@ func (t *Task) addDependants(others []*Task) {
 }
 
 func NewTask(taskType TaskType, fileIn string, fileOut string) *Task {
-	task := Task{taskId, 0, Pending, taskType, fileIn, fileOut, []*Task{}}
+	task := Task{taskId, 0, 0, Pending, taskType, fileIn, fileOut, []*Task{}}
 	taskId += 1
 	return &task
 }
@@ -130,18 +146,20 @@ func GenerateTasks() []*Task {
 		log.Printf("%s : %v", path, files)
 
 		concatenateDependees := []*Task{}
-
+		
 		for _, file := range files {
 
 			fileIn := file
 			fileOut := makeTemporaryFile(".mp4")
-			transcodeTask := NewTranscodeTask(fileIn, fileOut)
+			transcodeTask := NewTranscodeTask(fileIn.path, fileOut)
+			transcodeTask.inputSize = fileIn.size	
 			tasks = append(tasks, transcodeTask)
 
 			if settings.fixAudio {			
 				fixAudioFileOut := makeTemporaryFile(".mp4")
-				fixAudioTask := NewFixAudioTask(fileIn, fixAudioFileOut)				
-				
+				fixAudioTask := NewFixAudioTask(fileIn.path, fixAudioFileOut)				
+				fixAudioTask.inputSize = fileIn.size
+
 				transcodeTask.fileIn = fixAudioFileOut
 				transcodeTask.addDependant(fixAudioTask)
 
@@ -200,4 +218,18 @@ func makeTemporaryFile(extension string) string {
 func removeTemporaryFile(path string) {
 	// ignore any errors (which will probably be "file not found")
 	os.Remove(path)
+}
+
+func niceSize(bytes int64) string {
+	const unit = 1024
+    if bytes < unit {
+        return fmt.Sprintf("%d B", bytes)
+    }
+    div, exp := int64(unit), 0
+    for n := bytes / unit; n >= unit; n /= unit {
+        div *= unit
+        exp++
+    }
+    return fmt.Sprintf("%.1f %ciB",
+        float64(bytes)/float64(div), "KMGTPE"[exp])
 }

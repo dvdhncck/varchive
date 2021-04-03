@@ -20,7 +20,7 @@ func ScheduleTasks(tasks []*Task) {
 		task := findFirstRunnableTask(tasks)
 
 		if task != nil {
-			log.Printf("Running task %v", task)
+			log.Printf("Running task %v", task.BriefString())
 
 			waitGroup.Add(1)
 			task.taskState = Running
