@@ -13,6 +13,8 @@ func ScheduleTasks(tasks []*Task) {
 	waitGroup := new(sync.WaitGroup)
 	guard := make(chan int, settings.maxParallelTasks)
 
+	m := NewMonitor()
+
 	for !completed {
 
 		guard <- 1 // blocks if the channel is full (i.e. enough go routines are running)
@@ -20,7 +22,6 @@ func ScheduleTasks(tasks []*Task) {
 		task := findFirstRunnableTask(tasks)
 
 		if task != nil {
-			log.Printf("Running task %v", task.BriefString())
 
 			waitGroup.Add(1)
 			task.taskState = Running
@@ -28,7 +29,9 @@ func ScheduleTasks(tasks []*Task) {
 			go func() {
 				defer waitGroup.Done()
 
-				taskStartTime := time.Now()
+				m.NotifyWorkerBegins(task)
+
+				task.startTime = time.Now()
 
 				ExecuteTask(task)
 				
@@ -36,11 +39,7 @@ func ScheduleTasks(tasks []*Task) {
 
 				task.taskState = Complete
 
-				task.runTime = time.Since(taskStartTime)
-
-				runTimeInSeconds := task.runTime.Seconds()
-				bytesPerSecond := float64(task.inputSize) / float64(runTimeInSeconds)
-				log.Printf("Completed task %s in %v (%v/s)", task.BriefString(), task.runTime, niceSize(int64(bytesPerSecond)))
+				m.NotifyWorkerEnds(task)			
 			}()
 		} else {
 			if confirmThatAllTasksAreCompleted(tasks) {
@@ -86,8 +85,3 @@ func confirmThatAllTasksAreCompleted(tasks []*Task) bool {
 	return true
 }
 
-// efficient removal of item from list (does not preserve the order of the list)
-// func remove(s []*Task, i int) []*Task {
-// 	s[i] = s[len(s)-1]
-// 	return s[:len(s)-1]
-// }

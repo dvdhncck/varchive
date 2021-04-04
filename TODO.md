@@ -1,4 +1,4 @@
-1. Sort the task list by size in input file, biggest files first
+1. [DONE] Sort the task list by size in input file, biggest files first
 
 2. delete temp files programatically
 
@@ -9,3 +9,6 @@
 5. different flavours of transcode - including "user specified params"
 
 6. EXIF tag handling
+
+7. forecast run time based on measured bytes/second
+
