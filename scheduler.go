@@ -54,6 +54,8 @@ func ScheduleTasks(tasks []*Task) {
 
 	waitGroup.Wait() // hang on until the last go routine checks in
 
+	m.ShutdownCleanly()
+	
 	runTime := time.Since(startTime)
 	log.Printf("Elapsed (real) time: %v", runTime)
 

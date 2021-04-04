@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	//"log"
+	"log"
 	"goncurses"
 	"sync"
 	"time"
@@ -18,8 +18,9 @@ type Stats struct {
 }
 
 type WorkerInfo struct {
-	workerId int
-	task     *Task
+	workerId 		 int
+	task     		 *Task
+	runTimeInSeconds float64
 }
 
 type Monitor struct {
@@ -31,11 +32,16 @@ type Monitor struct {
 	stats          Stats
 }
 
+func (m *Monitor) ShutdownCleanly() {
+	log.Printf("Clean shutdown requested")
+	m.closeTerminal()
+}
+
 func (m *Monitor) NotifyWorkerBegins(task *Task) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.addMessage(fmt.Sprintf("Running task %v", task.BriefString()))
-	m.workerInfo = append(m.workerInfo, &WorkerInfo{1, task})
+	m.workerInfo = append(m.workerInfo, &WorkerInfo{1, task, 0})
 }
 
 func (m *Monitor) NotifyWorkerEnds(task *Task) {
@@ -83,22 +89,28 @@ func NewMonitor() *Monitor {
 	defer m.closeTerminal()
 
 	go func(m *Monitor) {
+
+		startTime := time.Now()
+
 		for {
 			m.lock.Lock()
 
 			m.clearTerminal()
 			m.writeToTerminal(fmt.Sprintf("%d beavers employed\n", len(m.workerInfo)))
 			m.writeToTerminal("Task    Purpose      Size       Run time        ETA")
-			m.writeToTerminal("-------+------------+----------+---------------+----------------")
+			m.writeToTerminal("-------+------------+-----------+---------------+----------------")
 			for _, workerInfo := range m.workerInfo {
 				task := workerInfo.task
-				runTime := time.Since(task.startTime).Seconds()
-				remaining := m.estimateTimeRemaining(task)
-				m.writeToTerminal(fmt.Sprintf("%4d    %-13s%-13s%-16s%-16s",
-					task.id, task.TaskType(), task.Size(), niceTime(runTime), remaining))
+				workerInfo.runTimeInSeconds = time.Since(task.startTime).Seconds()
+				remaining := m.estimateTimeRemaining(workerInfo.runTimeInSeconds, task)
+				m.writeToTerminal(fmt.Sprintf("%4d    %-13s%-12s%-16s%-16s",
+					task.id, task.TaskType(), task.Size(), 
+					niceTime(workerInfo.runTimeInSeconds), remaining))
 			}
 
-			m.writeToTerminal("\nElapsed: 000:00:00\nCompute: 000:00:00\nSpeedUp: 000")
+			runTime := time.Since(startTime).Seconds()
+			m.writeToTerminal(fmt.Sprintf("\nElapsed: %s\nCompute: 000:00:00\nSpeedUp: 000", 
+				niceTime(runTime)))
 
 			m.writeToTerminal("\nRecently:")
 			for _, message := range m.messages {
@@ -129,11 +141,10 @@ func niceTime(seconds float64) string {
 	return fmt.Sprintf("%03d:%02d:%02d", h, m, s)
 }
 
-func (m *Monitor) estimateTimeRemaining(task *Task) string {
+func (m *Monitor) estimateTimeRemaining(timeSoFarInSeconds float64, task *Task) string {
 	if m.stats.isReady {
-		estimatedRunTimeInSeconds := float64(task.inputSize) / m.stats.estimatedBytesPerSecond
-		runTimeSoFarInSeconds := time.Since(task.startTime).Seconds()
-		remainingTimeInSeconds := estimatedRunTimeInSeconds - runTimeSoFarInSeconds
+		estimatedTotalTimeInSeconds := float64(task.inputSize) / m.stats.estimatedBytesPerSecond
+		remainingTimeInSeconds := estimatedTotalTimeInSeconds - timeSoFarInSeconds
 		if remainingTimeInSeconds < 0 {
 			remainingTimeInSeconds = 0
 		}
