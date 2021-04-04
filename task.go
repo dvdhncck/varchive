@@ -27,8 +27,8 @@ type Task struct {
 
 	inputSize int64
 
-	startTime time.Time
-	runTime   time.Duration
+	startTime        time.Time
+	runTimeInSeconds float64
 
 	taskState TaskState
 	taskType  TaskType

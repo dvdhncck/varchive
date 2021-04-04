@@ -13,7 +13,7 @@ func ScheduleTasks(tasks []*Task) {
 	waitGroup := new(sync.WaitGroup)
 	guard := make(chan int, settings.maxParallelTasks)
 
-	m := NewMonitor()
+	m := NewMonitor(tasks)
 
 	for !completed {
 
@@ -55,17 +55,17 @@ func ScheduleTasks(tasks []*Task) {
 	waitGroup.Wait() // hang on until the last go routine checks in
 
 	m.ShutdownCleanly()
-	
-	runTime := time.Since(startTime)
-	log.Printf("Elapsed (real) time: %v", runTime)
 
-	totalTime := time.Duration(0)
+	runTime := time.Since(startTime).Seconds()
+	log.Printf("Elapsed (real) time: %s", niceTime(runTime))
+
+	totalTime := 0.0
 	for _, task := range tasks {
-		totalTime += task.runTime
+		totalTime += task.runTimeInSeconds
 	}
-	log.Printf("Total compute time: %v", totalTime)
-
-	log.Printf("Speedup: %.2f", float64(time.Duration(totalTime.Milliseconds())) / float64(time.Duration(runTime.Milliseconds())))
+	
+	log.Printf("Total compute time: %s", niceTime(totalTime))
+	log.Printf("Speedup: %.2f", totalTime / runTime)
 
 }
 

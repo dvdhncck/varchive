@@ -29,7 +29,9 @@ func GenerateTasks() []*Task {
 	paths := ScanPaths()
 
 	for path, files := range paths {
-		log.Printf("%s : %v", path, files)
+		if settings.verbose {
+			log.Printf("%s : %v", path, files)
+		}
 
 		concatenateDependees := []*Task{}
 
@@ -73,4 +75,3 @@ func GenerateTasks() []*Task {
 func SortTasks(tasks []*Task) {
 	sort.Slice(tasks, func(i1, i2 int) bool { return tasks[i1].lessThan(tasks[i2]) })
 }
-

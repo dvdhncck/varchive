@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"goncurses"
+	"log"
 	"sync"
 	"time"
 )
@@ -11,15 +11,18 @@ import (
 const maxMessages = 8
 
 type Stats struct {
-	isReady                 bool
-	estimatedBytesPerSecond float64
-	totalBytes              float64
-	totalComputeTimeSeconds float64
+	isReady                   bool
+	tasksCompleted 			  int
+	tasksRemaining            int
+	estimatedBytesPerSecond   float64
+	totalBytes                float64
+	totalTranscodeTimeSeconds float64	
+	totalRunTimeInSeconds     float64
 }
 
 type WorkerInfo struct {
-	workerId 		 int
-	task     		 *Task
+	workerId         int
+	task             *Task
 	runTimeInSeconds float64
 }
 
@@ -50,20 +53,25 @@ func (m *Monitor) NotifyWorkerEnds(task *Task) {
 
 	for index, workerInfo := range m.workerInfo {
 		if workerInfo.task.id == task.id {
+			task := workerInfo.task
+			task.runTimeInSeconds = time.Since(task.startTime).Seconds()
+			bytesPerSecond := float64(task.inputSize) / float64(task.runTimeInSeconds)
 
-			runTimeInSeconds := time.Since(task.startTime).Seconds()
-			bytesPerSecond := float64(task.inputSize) / float64(runTimeInSeconds)
+			m.stats.totalRunTimeInSeconds += task.runTimeInSeconds
+			m.stats.tasksCompleted++
+			m.stats.tasksRemaining--
 
 			if task.taskType == Transcode {
 				m.stats.totalBytes += float64(task.inputSize)
-				m.stats.totalComputeTimeSeconds += runTimeInSeconds
-				m.stats.estimatedBytesPerSecond = m.stats.totalBytes / m.stats.totalComputeTimeSeconds
+				m.stats.totalTranscodeTimeSeconds += task.runTimeInSeconds
+				// this estimate is very dodgy because it doesnt take into account the number of workers doing transcoding tasks
+				m.stats.estimatedBytesPerSecond = m.stats.totalBytes / m.stats.totalTranscodeTimeSeconds
 				m.stats.isReady = true
-				m.addMessage(fmt.Sprintf("Recomputed speed as %v/s", niceSize(int64(bytesPerSecond))))
+				m.addMessage(fmt.Sprintf("Estimated transcoding speed as %v/s", niceSize(int64(bytesPerSecond))))
 			}
 
 			m.addMessage(fmt.Sprintf("Completed task %s in %v (%v/s)",
-				task.BriefString(), niceTime(runTimeInSeconds), niceSize(int64(bytesPerSecond))))
+				task.BriefString(), niceTime(task.runTimeInSeconds), niceSize(int64(bytesPerSecond))))
 
 			// rebuild the slice with the index'th element removed
 			m.workerInfo = append(m.workerInfo[:index], m.workerInfo[index+1:]...)
@@ -72,13 +80,13 @@ func (m *Monitor) NotifyWorkerEnds(task *Task) {
 	}
 }
 
-func NewMonitor() *Monitor {
+func NewMonitor(tasks []*Task) *Monitor {
 	m := &Monitor{sync.Mutex{},
-		1204,
+		0,
 		[]*WorkerInfo{},
 		&goncurses.Window{},
 		[maxMessages]*string{},
-		Stats{false, 0, 0, 0}}
+		Stats{false, 0, len(tasks), 0, 0, 0, 0}}  // TODO: figure out how to do this more nicely
 
 	for i := 0; i < maxMessages; i++ {
 		text := "..."
@@ -96,21 +104,26 @@ func NewMonitor() *Monitor {
 			m.lock.Lock()
 
 			m.clearTerminal()
-			m.writeToTerminal(fmt.Sprintf("%d beavers employed\n", len(m.workerInfo)))
-			m.writeToTerminal("Task    Purpose      Size       Run time        ETA")
-			m.writeToTerminal("-------+------------+-----------+---------------+----------------")
+			m.writeToTerminal(fmt.Sprintf("%d beavers employed, %d tasks completed, %d remaining\n", 
+				len(m.workerInfo), m.stats.tasksCompleted, m.stats.tasksRemaining))
+			m.writeToTerminal("Task     Purpose       Size          Run time        ETA")
+			m.writeToTerminal("-------+------------+-------------+---------------+----------------")
+			computeTime := 0.0
 			for _, workerInfo := range m.workerInfo {
 				task := workerInfo.task
 				workerInfo.runTimeInSeconds = time.Since(task.startTime).Seconds()
+				computeTime += workerInfo.runTimeInSeconds
 				remaining := m.estimateTimeRemaining(workerInfo.runTimeInSeconds, task)
-				m.writeToTerminal(fmt.Sprintf("%4d    %-13s%-12s%-16s%-16s",
-					task.id, task.TaskType(), task.Size(), 
+				m.writeToTerminal(fmt.Sprintf("%4d    %-13s%11s   %-16s%-16s",
+					task.id, task.TaskType(), task.Size(),
 					niceTime(workerInfo.runTimeInSeconds), remaining))
 			}
 
 			runTime := time.Since(startTime).Seconds()
-			m.writeToTerminal(fmt.Sprintf("\nElapsed: %s\nCompute: 000:00:00\nSpeedUp: 000", 
-				niceTime(runTime)))
+			computeTime += m.stats.totalRunTimeInSeconds
+			speedUp := computeTime / runTime
+			m.writeToTerminal(fmt.Sprintf("\nElapsed: %s\nCompute: %s\nSpeedUp: %.2f",
+				niceTime(runTime), niceTime(computeTime), speedUp))
 
 			m.writeToTerminal("\nRecently:")
 			for _, message := range m.messages {

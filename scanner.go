@@ -20,7 +20,9 @@ func ScanPaths() map[string]FilesWithSize {
 
 	for _, path := range settings.paths {
 
-		log.Printf("Scanning %s....\n", path)
+		if settings.verbose { 
+			log.Printf("Scanning %s....\n", path)
+		}
 
 		fileInfo, err := os.Stat(path)
 		if err != nil {
@@ -30,7 +32,9 @@ func ScanPaths() map[string]FilesWithSize {
 		filesForPath := FilesWithSize{}
 
 		if fileInfo.IsDir() {
-			log.Printf("%s is a directory\n", path)
+			if settings.verbose { 
+				log.Printf("%s is a directory\n", path)
+			}
 			err := filepath.Walk(path, func(walkedPath string, fileInfo os.FileInfo, err error) error {
 				if err == nil {
 					if walkedPath != path { // the path itself is included in the results of Walk(path,...)
@@ -56,6 +60,5 @@ func ScanPaths() map[string]FilesWithSize {
 	}
 
 	return pathsAndFiles
-
 }
 
