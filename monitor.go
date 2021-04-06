@@ -23,7 +23,7 @@ type Estimator struct {
 }
 
 type Monitor struct {
-	timer 		Timer
+	timer       Timer
 	lock        sync.Mutex
 	activeTasks []*Task
 	display     *Display
@@ -35,6 +35,12 @@ type Monitor struct {
 func (m *Monitor) ShutdownCleanly() {
 	log.Printf("Clean shutdown requested")
 	m.display.Close()
+}
+
+func (m *Monitor) UpdateTaskRunTimes() {
+	for _, task := range m.activeTasks {
+		task.runTimeInSeconds = m.timer.SecondsSince(task.startTimestamp)
+	}
 }
 
 func (m *Monitor) NotifyTaskBegins(task *Task) {
@@ -97,6 +103,8 @@ func (m *Monitor) Start() {
 		for {
 			m.lock.Lock()
 
+			m.UpdateTaskRunTimes()
+
 			m.display.Clear()
 			m.display.Write(fmt.Sprintf("%d beavers employed, %d tasks completed, %d remaining\n",
 				len(m.activeTasks), m.stats.tasksCompleted, m.stats.tasksRemaining))
@@ -104,14 +112,12 @@ func (m *Monitor) Start() {
 			m.display.Write("-------+------------+-------------+---------------+----------------")
 
 			for _, task := range m.activeTasks {
-				task.runTimeInSeconds = m.timer.SecondsSince(task.startTimestamp)
-				remaining := m.EstimateTimeRemaining(task)
 				m.display.Write(fmt.Sprintf("%4d    %-13s%11s   %-16s%-16s",
 					task.id,
 					task.TaskType(),
 					task.Size(),
 					niceTime(task.runTimeInSeconds),
-					niceTime(remaining)))
+					niceTime(m.EstimateTimeRemaining(task))))
 			}
 
 			runTime := m.timer.SecondsSince(startTimestamp)
@@ -168,7 +174,7 @@ func (m *Monitor) countWorkersOfType(taskType TaskType) int {
 
 // called when a worker completes a task (and before any new task is scheduled)
 func (m *Monitor) updateEstimates(task *Task) {
-	e := m.estimator
+	e := &m.estimator
 
 	workersOfThisType := m.countWorkersOfType(task.taskType)
 
@@ -179,7 +185,7 @@ func (m *Monitor) updateEstimates(task *Task) {
 
 	ebpsAllWorkers := e.totalInputSize[taskType] / e.totalRunTime[taskType]
 
-	e.estimatedBytesPerSecond[taskType] = ebpsAllWorkers / float64(workersOfThisType)
+	e.estimatedBytesPerSecond[taskType] = ebpsAllWorkers * float64(workersOfThisType)
 }
 
 func (m *Monitor) EstimateBytesPerSecond(taskType TaskType) float64 {
