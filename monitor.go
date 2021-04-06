@@ -10,10 +10,10 @@ import (
 const maxMessages = 8
 
 type Stats struct {
-	isReady        bool
-	tasksCompleted int
-	tasksRemaining int
-	totalBytes     float64
+	isReady               bool
+	tasksCompleted        int
+	tasksRemaining        int
+	totalBytes            float64
 	totalRunTimeInSeconds float64
 }
 
@@ -23,17 +23,13 @@ type Estimator struct {
 	estimatedBytesPerSecond [TaskTypeCount]float64
 }
 
-type WorkerInfo struct {
-	task             *Task
-}
-
 type Monitor struct {
-	lock      sync.Mutex
-	workers   []*WorkerInfo
-	display   *Display
-	messages  [maxMessages]*string
-	stats     Stats
-	estimator Estimator
+	lock        sync.Mutex
+	activeTasks []*Task
+	display     *Display
+	messages    [maxMessages]*string
+	stats       Stats
+	estimator   Estimator
 }
 
 func (m *Monitor) ShutdownCleanly() {
@@ -45,42 +41,41 @@ func (m *Monitor) NotifyTaskBegins(task *Task) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.addMessage(fmt.Sprintf("Running task %v", task.BriefString()))
-	m.workers = append(m.workers, &WorkerInfo{task})
+	m.activeTasks = append(m.activeTasks, task)
 }
 
 func (m *Monitor) NotifyTaskEnds(task *Task) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	for index, workerInfo := range m.workers {
-		if workerInfo.task.id == task.id {
-			task := workerInfo.task
+	for index, t := range m.activeTasks {
+		if t.id == task.id {
 			task.runTimeInSeconds = time.Since(task.startTime).Seconds()
-			
+
 			bytesPerSecond := float64(task.inputSize) / float64(task.runTimeInSeconds)
 
 			m.stats.tasksCompleted++
 			m.stats.tasksRemaining--
 
-			m.updateEstimates(workerInfo)
+			m.updateEstimates(task)
 
 			m.addMessage(fmt.Sprintf("Completed task %s in %v (%v/s)",
 				task.BriefString(), niceTime(task.runTimeInSeconds), niceSize(int64(bytesPerSecond))))
 
-			// rebuild the slice with the index'th element removed
-			m.workers = append(m.workers[:index], m.workers[index+1:]...)
+			// rebuild the activeTasks list with the index'th element removed
+			m.activeTasks = append(m.activeTasks[:index], m.activeTasks[index+1:]...)
 			return
 		}
 	}
 }
 
 func NewMonitor(tasks []*Task) *Monitor {
-	workers := []*WorkerInfo{}
+	activeTasks := []*Task{}
 	messages := [maxMessages]*string{}
 	estimator := Estimator{[TaskTypeCount]float64{}, [TaskTypeCount]float64{}, [TaskTypeCount]float64{}}
 	stats := Stats{false, len(tasks), 0, 0, 0}
 
-	m := &Monitor{sync.Mutex{}, workers, NewDisplay(), messages, stats, estimator}
+	m := &Monitor{sync.Mutex{}, activeTasks, NewDisplay(), messages, stats, estimator}
 
 	for i := 0; i < maxMessages; i++ {
 		text := "..."
@@ -103,19 +98,18 @@ func (m *Monitor) Start() {
 
 			m.display.Clear()
 			m.display.Write(fmt.Sprintf("%d beavers employed, %d tasks completed, %d remaining\n",
-				len(m.workers), m.stats.tasksCompleted, m.stats.tasksRemaining))
+				len(m.activeTasks), m.stats.tasksCompleted, m.stats.tasksRemaining))
 			m.display.Write("Task     Purpose       Size          Run time        ETA")
 			m.display.Write("-------+------------+-------------+---------------+----------------")
 
-			for _, workerInfo := range m.workers {
-				task := workerInfo.task
+			for _, task := range m.activeTasks {
 				task.runTimeInSeconds = time.Since(task.startTime).Seconds()
-				remaining := m.EstimateTimeRemaining(workerInfo)
+				remaining := m.EstimateTimeRemaining(task)
 				m.display.Write(fmt.Sprintf("%4d    %-13s%11s   %-16s%-16s",
-					task.id, 
-					task.TaskType(), 
+					task.id,
+					task.TaskType(),
 					task.Size(),
-					niceTime(task.runTimeInSeconds), 
+					niceTime(task.runTimeInSeconds),
 					niceTime(remaining)))
 			}
 
@@ -163,8 +157,8 @@ func (m *Monitor) addMessage(message string) {
 
 func (m *Monitor) countWorkersOfType(taskType TaskType) int {
 	count := 0
-	for _, workerInfo := range m.workers {
-		if workerInfo.task.taskType == taskType {
+	for _, task := range m.activeTasks {
+		if task.taskType == taskType {
 			count++
 		}
 	}
@@ -172,16 +166,16 @@ func (m *Monitor) countWorkersOfType(taskType TaskType) int {
 }
 
 // called when a worker completes a task (and before any new task is scheduled)
-func (m *Monitor) updateEstimates(workerInfo *WorkerInfo) {
+func (m *Monitor) updateEstimates(task *Task) {
 	e := m.estimator
-	
-	workersOfThisType := m.countWorkersOfType(workerInfo.task.taskType)
 
-	taskType := workerInfo.task.taskType
+	workersOfThisType := m.countWorkersOfType(task.taskType)
 
-	e.totalInputSize[taskType] += float64(workerInfo.task.inputSize)
-	e.totalRunTime[taskType] += float64(workerInfo.task.runTimeInSeconds)	
-	
+	taskType := task.taskType
+
+	e.totalInputSize[taskType] += float64(task.inputSize)
+	e.totalRunTime[taskType] += float64(task.runTimeInSeconds)
+
 	ebpsAllWorkers := e.totalInputSize[taskType] / e.totalRunTime[taskType]
 
 	e.estimatedBytesPerSecond[taskType] = ebpsAllWorkers / float64(workersOfThisType)
@@ -191,16 +185,16 @@ func (m *Monitor) EstimateBytesPerSecond(taskType TaskType) float64 {
 	return m.estimator.estimatedBytesPerSecond[taskType]
 }
 
-func (m *Monitor) EstimateTimeRemaining(workerInfo *WorkerInfo) float64 {
-	workersOfThisType := m.countWorkersOfType(workerInfo.task.taskType)
+func (m *Monitor) EstimateTimeRemaining(task *Task) float64 {
+	workersOfThisType := m.countWorkersOfType(task.taskType)
 
-	bpsForThisWorker := m.EstimateBytesPerSecond(workerInfo.task.taskType) / float64(workersOfThisType)
+	bpsForThisWorker := m.EstimateBytesPerSecond(task.taskType) / float64(workersOfThisType)
 
-	estimatedTotalTimeInSeconds := float64(workerInfo.task.inputSize) / bpsForThisWorker
-	remainingTimeInSeconds := estimatedTotalTimeInSeconds - workerInfo.task.runTimeInSeconds
-	
+	estimatedTotalTimeInSeconds := float64(task.inputSize) / bpsForThisWorker
+	remainingTimeInSeconds := estimatedTotalTimeInSeconds - task.runTimeInSeconds
+
 	if remainingTimeInSeconds < 0 {
-	 	remainingTimeInSeconds = 0
+		remainingTimeInSeconds = 0
 	}
 
 	return remainingTimeInSeconds
