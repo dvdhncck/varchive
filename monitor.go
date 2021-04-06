@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"time"
 )
 
 const maxMessages = 8
@@ -39,7 +38,7 @@ func (m *Monitor) ShutdownCleanly() {
 }
 
 func (m *Monitor) NotifyTaskBegins(task *Task) {
-	task.startTimestamp = time.Now()
+	task.startTimestamp = m.timer.Now()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.addMessage(fmt.Sprintf("Running task %v", task.BriefString()))
@@ -47,7 +46,7 @@ func (m *Monitor) NotifyTaskBegins(task *Task) {
 }
 
 func (m *Monitor) NotifyTaskEnds(task *Task) {
-	task.runTimeInSeconds = time.Since(task.startTimestamp).Seconds()
+	task.runTimeInSeconds = m.timer.SecondsSince(task.startTimestamp)
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -71,13 +70,13 @@ func (m *Monitor) NotifyTaskEnds(task *Task) {
 	}
 }
 
-func NewMonitor(clock Timer, tasks []*Task) *Monitor {
+func NewMonitor(timer Timer, tasks []*Task) *Monitor {
 	activeTasks := []*Task{}
 	messages := [maxMessages]*string{}
 	estimator := Estimator{[TaskTypeCount]float64{}, [TaskTypeCount]float64{}, [TaskTypeCount]float64{}}
 	stats := Stats{false, len(tasks), 0, 0, 0}
 
-	m := &Monitor{clock, sync.Mutex{}, activeTasks, NewDisplay(), messages, stats, estimator}
+	m := &Monitor{timer, sync.Mutex{}, activeTasks, NewDisplay(), messages, stats, estimator}
 
 	for i := 0; i < maxMessages; i++ {
 		text := "..."
@@ -93,7 +92,7 @@ func (m *Monitor) Start() {
 
 	go func(m *Monitor) {
 
-		startTimestamp := time.Now()
+		startTimestamp := m.timer.Now()
 
 		for {
 			m.lock.Lock()
@@ -125,7 +124,7 @@ func (m *Monitor) Start() {
 			m.display.Flush()
 			m.lock.Unlock()
 
-			time.Sleep(1 * time.Second)
+			m.timer.MilliSleep(1000)
 		}
 	}(m)
 }

@@ -32,7 +32,7 @@ func main() {
 		}
 	}
 
-	ScheduleTasks(TimerImpl{}, tasks)
+	ScheduleTasks(NewTimer(), tasks)
 }
 
 func initialiseLogging() {

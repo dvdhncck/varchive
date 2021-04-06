@@ -17,11 +17,13 @@ func TestEstimation(t *testing.T) {
 
 	tasks := []*Task{task1, task2, task3}
 
-	m := NewMonitor(TimerImpl{}, tasks)
+	timer := NewDeterministicTimer()
+
+	m := NewMonitor(timer, tasks)
 
 	m.NotifyTaskBegins(task1)
 
-	//task1.runTimeInSeconds = 6
+	timer.AdvanceSeconds(6)
 
 	m.NotifyTaskEnds(task1)
 

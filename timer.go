@@ -12,11 +12,17 @@ type Timestamp = time.Time
 type Timer interface {
 	Now() Timestamp
 	SecondsSince(Timestamp) float64
-	MilliSleep(int64)
+	MilliSleep(int64) // needs to take a Timer*....
 }
 
-type TimerImpl struct{}
+// the default implementation defers to the real time.* methods
 
-func (c TimerImpl) Now() Timestamp                     { return time.Now() }
-func (c TimerImpl) SecondsSince(ago Timestamp) float64 { return time.Since(ago).Seconds() }
-func (c TimerImpl) MilliSleep(nap int64)               { time.Sleep(time.Duration(nap * time.Hour.Milliseconds())) }
+func NewTimer() Timer {
+	return timerImpl{}
+}
+
+type timerImpl struct{}
+
+func (timerImpl) Now() Timestamp                     { return time.Now() }
+func (timerImpl) SecondsSince(ago Timestamp) float64 { return time.Since(ago).Seconds() }
+func (timerImpl) MilliSleep(nap int64)               { time.Sleep(time.Duration(nap * time.Hour.Milliseconds())) }
