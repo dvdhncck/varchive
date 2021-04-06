@@ -3,17 +3,16 @@ package main
 import (
 	"log"
 	"sync"
-	"time"
 )
 
-func ScheduleTasks(tasks []*Task) {
+func ScheduleTasks(timer Timer, tasks []*Task) {
 
 	completed := false
-	startTime := time.Now()
+	startTime := timer.Now()
 	waitGroup := new(sync.WaitGroup)
 	guard := make(chan int, settings.maxParallelTasks)
 
-	m := NewMonitor(tasks)
+	m := NewMonitor(timer, tasks)
 	m.Start()
 
 	for !completed {
@@ -30,17 +29,15 @@ func ScheduleTasks(tasks []*Task) {
 			go func() {
 				defer waitGroup.Done()
 
-				m.NotifyTaskBegins(task)
-
-				task.startTime = time.Now()
+				m.NotifyTaskBegins(task)				
 
 				ExecuteTask(task)
 				
-				<-guard // consume an item from the channel, allowing another go routine to start
-
 				task.taskState = Complete
 
-				m.NotifyTaskEnds(task)			
+				m.NotifyTaskEnds(task)	
+				
+				<-guard // consume an item from the channel, allowing another go routine to start
 			}()
 		} else {
 			if confirmThatAllTasksAreCompleted(tasks) {
@@ -48,7 +45,7 @@ func ScheduleTasks(tasks []*Task) {
 				completed = true
 			} else {
 				// we will check again shortly
-				time.Sleep(250 * time.Millisecond)
+				timer.MilliSleep(250)
 			}
 		}
 	}
@@ -57,7 +54,7 @@ func ScheduleTasks(tasks []*Task) {
 
 	m.ShutdownCleanly()
 
-	runTime := time.Since(startTime).Seconds()
+	runTime := timer.SecondsSince(startTime)
 	log.Printf("Elapsed (real) time: %s", niceTime(runTime))
 
 	totalTime := 0.0
@@ -67,7 +64,6 @@ func ScheduleTasks(tasks []*Task) {
 	
 	log.Printf("Total compute time: %s", niceTime(totalTime))
 	log.Printf("Speedup: %.2f", totalTime / runTime)
-
 }
 
 func findFirstRunnableTask(tasks []*Task) *Task {

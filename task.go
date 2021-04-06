@@ -27,7 +27,7 @@ type Task struct {
 
 	inputSize int64
 
-	startTime        time.Time
+	startTimestamp   Timestamp
 	runTimeInSeconds float64
 
 	taskState TaskState

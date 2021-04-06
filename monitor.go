@@ -24,6 +24,7 @@ type Estimator struct {
 }
 
 type Monitor struct {
+	timer 		Timer
 	lock        sync.Mutex
 	activeTasks []*Task
 	display     *Display
@@ -38,6 +39,7 @@ func (m *Monitor) ShutdownCleanly() {
 }
 
 func (m *Monitor) NotifyTaskBegins(task *Task) {
+	task.startTimestamp = time.Now()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.addMessage(fmt.Sprintf("Running task %v", task.BriefString()))
@@ -45,13 +47,13 @@ func (m *Monitor) NotifyTaskBegins(task *Task) {
 }
 
 func (m *Monitor) NotifyTaskEnds(task *Task) {
+	task.runTimeInSeconds = time.Since(task.startTimestamp).Seconds()
+
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	for index, t := range m.activeTasks {
 		if t.id == task.id {
-			task.runTimeInSeconds = time.Since(task.startTime).Seconds()
-
 			bytesPerSecond := float64(task.inputSize) / float64(task.runTimeInSeconds)
 
 			m.stats.tasksCompleted++
@@ -69,13 +71,13 @@ func (m *Monitor) NotifyTaskEnds(task *Task) {
 	}
 }
 
-func NewMonitor(tasks []*Task) *Monitor {
+func NewMonitor(clock Timer, tasks []*Task) *Monitor {
 	activeTasks := []*Task{}
 	messages := [maxMessages]*string{}
 	estimator := Estimator{[TaskTypeCount]float64{}, [TaskTypeCount]float64{}, [TaskTypeCount]float64{}}
 	stats := Stats{false, len(tasks), 0, 0, 0}
 
-	m := &Monitor{sync.Mutex{}, activeTasks, NewDisplay(), messages, stats, estimator}
+	m := &Monitor{clock, sync.Mutex{}, activeTasks, NewDisplay(), messages, stats, estimator}
 
 	for i := 0; i < maxMessages; i++ {
 		text := "..."
@@ -91,7 +93,7 @@ func (m *Monitor) Start() {
 
 	go func(m *Monitor) {
 
-		startTime := time.Now()
+		startTimestamp := time.Now()
 
 		for {
 			m.lock.Lock()
@@ -103,7 +105,7 @@ func (m *Monitor) Start() {
 			m.display.Write("-------+------------+-------------+---------------+----------------")
 
 			for _, task := range m.activeTasks {
-				task.runTimeInSeconds = time.Since(task.startTime).Seconds()
+				task.runTimeInSeconds = m.timer.SecondsSince(task.startTimestamp)
 				remaining := m.EstimateTimeRemaining(task)
 				m.display.Write(fmt.Sprintf("%4d    %-13s%11s   %-16s%-16s",
 					task.id,
@@ -113,7 +115,7 @@ func (m *Monitor) Start() {
 					niceTime(remaining)))
 			}
 
-			runTime := time.Since(startTime).Seconds()
+			runTime := m.timer.SecondsSince(startTimestamp)
 			m.display.Write(fmt.Sprintf("\nElapsed: %s", niceTime(runTime)))
 
 			m.display.Write("\nRecently:")

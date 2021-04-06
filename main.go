@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"io/ioutil"
 )
 
 func fatal(message string) {
@@ -32,7 +32,7 @@ func main() {
 		}
 	}
 
-	ScheduleTasks(tasks)
+	ScheduleTasks(TimerImpl{}, tasks)
 }
 
 func initialiseLogging() {
