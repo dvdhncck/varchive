@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
 	"sync"
 )
 
@@ -76,13 +77,13 @@ func (m *Monitor) NotifyTaskEnds(task *Task) {
 	}
 }
 
-func NewMonitor(timer Timer, tasks []*Task) *Monitor {
+func NewMonitor(timer Timer, tasks []*Task, display *Display) *Monitor {
 	activeTasks := []*Task{}
 	messages := [maxMessages]*string{}
 	estimator := Estimator{[TaskTypeCount]float64{}, [TaskTypeCount]float64{}, [TaskTypeCount]float64{}}
 	stats := Stats{false, len(tasks), 0, 0, 0}
 
-	m := &Monitor{timer, sync.Mutex{}, activeTasks, NewDisplay(), messages, stats, estimator}
+	m := &Monitor{timer, sync.Mutex{}, activeTasks, display, messages, stats, estimator}
 
 	for i := 0; i < maxMessages; i++ {
 		text := "..."
@@ -136,7 +137,7 @@ func (m *Monitor) Start() {
 }
 
 func niceTime(seconds float64) string {
-	if seconds <= 0 {
+	if math.IsInf(seconds, +1) || seconds < 0 {
 		return "---:--:--"
 	}
 

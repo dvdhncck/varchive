@@ -14,7 +14,7 @@ func Test_estimationAfterOneTask(t *testing.T) {
 	tasks := []*Task{task1}
 
 	timer := NewDeterministicTimer()
-	m := NewMonitor(timer, tasks)
+	m := NewMonitor(timer, tasks, NewDisplay())
 
 	m.NotifyTaskBegins(task1)
 	timer.AdvanceSeconds(6)
@@ -37,7 +37,7 @@ func Test_estimationAfterTwoSerialTasks(t *testing.T) {
 
 	timer := NewDeterministicTimer()
 
-	m := NewMonitor(timer, tasks)
+	m := NewMonitor(timer, tasks, NewDisplay())
 
 	m.NotifyTaskBegins(task1)
 
@@ -92,7 +92,7 @@ func Test_estimationAfterTwoParallelTasks(t *testing.T) {
 
 	timer := NewDeterministicTimer()
 
-	m := NewMonitor(timer, tasks)
+	m := NewMonitor(timer, tasks, NewDisplay())
 
 	m.NotifyTaskBegins(task1)
 	m.NotifyTaskBegins(task2)

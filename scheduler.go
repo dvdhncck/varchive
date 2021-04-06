@@ -12,7 +12,7 @@ func ScheduleTasks(timer Timer, tasks []*Task) {
 	waitGroup := new(sync.WaitGroup)
 	guard := make(chan int, settings.maxParallelTasks)
 
-	m := NewMonitor(timer, tasks)
+	m := NewMonitor(timer, tasks, NewDisplay())
 	m.Start()
 
 	for !completed {
