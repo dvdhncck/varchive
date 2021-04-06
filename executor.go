@@ -17,6 +17,14 @@ func doTranscode(task *Task) {
 		"--quality", fmt.Sprintf("%d", settings.quality),
 		"--two-pass", "--turbo",
 		"--aencoder", "copy",
+
+		"--comb-detect=default",
+        "--decomb=eedi2bob",
+
+		"--auto-anamorphic",
+        "--maxWidth", "960",
+        "--maxHeight", "540",
+
 		"2>&1"}
 
 	invoke("HandBrakeCLI", args)
