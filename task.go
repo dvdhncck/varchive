@@ -8,18 +8,18 @@ import (
 type TaskState int
 
 const (
-	Pending  TaskState = 1
-	Running  TaskState = 2
-	Complete TaskState = 3
+	Pending  TaskState = 0
+	Running  TaskState = 1
+	Complete TaskState = 2
 )
 
 type TaskType int
-
+const TaskTypeCount int = 3
 const (
 	// note that the ordering defines the 'priority' of a task when we schedule them
-	FixAudio    TaskType = 1
-	Transcode   TaskType = 2
-	Concatenate TaskType = 3
+	FixAudio    TaskType = 0
+	Transcode   TaskType = 1
+	Concatenate TaskType = 2
 )
 
 type Task struct {
@@ -49,8 +49,8 @@ func (t *Task) addDependants(others []*Task) {
 
 var taskId = 1
 
-func NewTask(taskType TaskType, fileIn string, fileOut string) *Task {
-	task := Task{taskId, 0, time.Time{}, 0, Pending, taskType, fileIn, fileOut, []*Task{}}
+func NewTask(taskType TaskType, fileIn string, fileOut string, inputSize int64) *Task {
+	task := Task{taskId, inputSize, time.Time{}, 0, Pending, taskType, fileIn, fileOut, []*Task{}}
 	taskId += 1
 	return &task
 }

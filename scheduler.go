@@ -14,6 +14,7 @@ func ScheduleTasks(tasks []*Task) {
 	guard := make(chan int, settings.maxParallelTasks)
 
 	m := NewMonitor(tasks)
+	m.Start()
 
 	for !completed {
 
@@ -29,7 +30,7 @@ func ScheduleTasks(tasks []*Task) {
 			go func() {
 				defer waitGroup.Done()
 
-				m.NotifyWorkerBegins(task)
+				m.NotifyTaskBegins(task)
 
 				task.startTime = time.Now()
 
@@ -39,7 +40,7 @@ func ScheduleTasks(tasks []*Task) {
 
 				task.taskState = Complete
 
-				m.NotifyWorkerEnds(task)			
+				m.NotifyTaskEnds(task)			
 			}()
 		} else {
 			if confirmThatAllTasksAreCompleted(tasks) {

@@ -17,7 +17,7 @@ func fatal(message string) {
 var settings *Settings
 
 func main() {
-
+	
 	initialiseLogging()
 
 	settings = ParseArguments() // guarantees that arguments are acceptable

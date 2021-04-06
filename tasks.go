@@ -6,16 +6,16 @@ import (
 	"sort"
 )
 
-func NewFixAudioTask(fileIn string, fileOut string) *Task {
-	return NewTask(FixAudio, fileIn, fileOut)
+func NewFixAudioTask(fileIn *FileWithSize, fileOut string) *Task {
+	return NewTask(FixAudio, fileIn.path, fileOut, fileIn.size)
 }
 
-func NewTranscodeTask(fileIn string, fileOut string) *Task {
-	return NewTask(Transcode, fileIn, fileOut)
+func NewTranscodeTask(fileIn *FileWithSize, fileOut string) *Task {
+	return NewTask(Transcode, fileIn.path, fileOut, fileIn.size)
 }
 
 func NewConcatenateTask(fileOut string, dependsOn []*Task) *Task {
-	task := NewTask(Concatenate, "", fileOut)
+	task := NewTask(Concatenate, "", fileOut, 0)
 	task.addDependants(dependsOn)
 	return task
 }
@@ -39,13 +39,13 @@ func GenerateTasks() []*Task {
 
 			fileIn := file
 			fileOut := makeTemporaryFile(".mp4")
-			transcodeTask := NewTranscodeTask(fileIn.path, fileOut)
+			transcodeTask := NewTranscodeTask(file, fileOut)
 			transcodeTask.inputSize = fileIn.size
 			tasks = append(tasks, transcodeTask)
 
 			if settings.fixAudio {
 				fixAudioFileOut := makeTemporaryFile(".mp4")
-				fixAudioTask := NewFixAudioTask(fileIn.path, fixAudioFileOut)
+				fixAudioTask := NewFixAudioTask(file, fixAudioFileOut)
 				fixAudioTask.inputSize = fileIn.size
 
 				transcodeTask.fileIn = fixAudioFileOut
