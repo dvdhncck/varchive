@@ -41,12 +41,6 @@ func Test_estimationAfterTwoSerialTasks(t *testing.T) {
 	m := varchive.NewMonitor(timer, tasks, varchive.NewDisplay())
 
 	m.NotifyTaskBegins(task1)
-
-	// we don't have an estimate yet as no tasks have completed
-	expected = math.Inf(+1) 
-	actual = m.EstimateTimeRemaining(task1)
-	assertEqual(t, "estimate with no completed tasks", expected, actual)
-
 	timer.AdvanceSeconds(6)	
 	m.NotifyTaskEnds(task1)
 	m.NotifyTaskBegins(task2)
@@ -112,7 +106,40 @@ func Test_estimationAfterTwoParallelTasks(t *testing.T) {
 }
 
 func Test_estimationWhenTaskIsOverrunning(t *testing.T) {
-	t.Fatal("not implemented")
+	task1 := varchive.NewTask(TASK, "", "", 3000)
+	task2 := varchive.NewTask(TASK, "", "", 3000)
+	tasks := []*varchive.Task{task1, task2}
+	timer := NewDeterministicTimer()
+	m := varchive.NewMonitor(timer, tasks, varchive.NewDisplay())
+	//m.Start() // starting the monitor actually causes time to advance
+	m.NotifyTaskBegins(task1)
+	timer.AdvanceSeconds(5)
+	m.NotifyTaskEnds(task1)
+
+	m.NotifyTaskBegins(task2)
+	timer.AdvanceSeconds(20)
+	
+	m.UpdateTaskRunTimes()  // GET RID OF THIS - but somehow without introducing artificial timing delays
+	
+	// we have an estimate, but task2 has overrun the predicated 5 seconds and still not finished
+
+	expected := math.Inf(-1)
+	actual := m.EstimateTimeRemaining(task2)
+	assertEqual(t, "estimate when task is overrunning", expected, actual)
+}
+
+
+func Test_estimationWhenNoDataAvailable(t *testing.T) {
+	task1 := varchive.NewTask(TASK, "", "", 3000)
+	tasks := []*varchive.Task{task1}
+	timer := NewDeterministicTimer()
+	m := varchive.NewMonitor(timer, tasks, varchive.NewDisplay())
+	m.NotifyTaskBegins(task1)
+
+	// we don't have an estimate yet as no tasks have completed
+	expected := math.Inf(+1) 
+	actual := m.EstimateTimeRemaining(task1)
+	assertEqual(t, "estimate with no available data", expected, actual)
 }
 
 func assertEqual(t *testing.T, message string, expected interface{}, actual interface{}) {

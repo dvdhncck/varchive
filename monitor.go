@@ -3,6 +3,7 @@ package varchive
 import (
 	"fmt"
 	"log"
+	"math"
 	"sync"
 )
 
@@ -169,7 +170,7 @@ func (m *Monitor) updateEstimates(task *Task) {
 	e.estimatedBytesPerSecond[taskType] = ebpsAllWorkers * float64(workersOfThisType)
 
 	m.addMessage(fmt.Sprintf("Estimates computed: FixAudio %s kps, Transcode %s kps",
-		niceSize(int64(e.estimatedBytesPerSecond[FixAudio])), 
+		niceSize(int64(e.estimatedBytesPerSecond[FixAudio])),
 		niceSize(int64(e.estimatedBytesPerSecond[Transcode]))))
 }
 
@@ -177,6 +178,9 @@ func (m *Monitor) EstimateBytesPerSecond(taskType TaskType) float64 {
 	return m.estimator.estimatedBytesPerSecond[taskType]
 }
 
+// returns the estimate of how much longer this task will take
+// or -Inf if the task is taking longer than expected
+// or +Inf if there is no data available to make the estimation
 func (m *Monitor) EstimateTimeRemaining(task *Task) float64 {
 	workersOfThisType := m.countWorkersOfType(task.taskType)
 
@@ -186,7 +190,7 @@ func (m *Monitor) EstimateTimeRemaining(task *Task) float64 {
 	remainingTimeInSeconds := estimatedTotalTimeInSeconds - task.runTimeInSeconds
 
 	if remainingTimeInSeconds < 0 {
-		remainingTimeInSeconds = 0
+		return math.Inf(-1)
 	}
 
 	return remainingTimeInSeconds
