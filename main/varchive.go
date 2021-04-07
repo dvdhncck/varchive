@@ -2,15 +2,14 @@ package main
 
 import (
 	"log"
-	"os"
 	va "davidhancock.com/varchive"
 )
 
 func main() {
 	
-	initialiseLogging()
-
 	va.ParseArguments() // guarantees that arguments are acceptable
+
+	va.InitialiseLogging()
 
 	tasks := va.GenerateTasks()
 
@@ -23,14 +22,5 @@ func main() {
 	}
 
 	va.ScheduleTasks(va.NewTimer(), tasks)
-}
-
-func initialiseLogging() {
-	// file, err := os.OpenFile("Scanner.log", os.O_CREATE|os.O_WRONLY, 0666)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	log.SetOutput(os.Stdout)
 }
 

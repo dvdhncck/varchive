@@ -16,6 +16,8 @@ type Settings struct {
 
 	outputRoot string
 
+	logToFile  string
+
 	maxParallelTasks int
 
 	encodeMode string
@@ -52,8 +54,11 @@ func ParseArguments() {
 	flag.StringVar(&settings.encodeMode, "encodeMode", "",
 		fmt.Sprintf("encode mode.\nValid modes: %s", validEncodeModeString))
 
-	flag.StringVar(&settings.outputRoot, "outputRoot", "varchive",
-		"location for output files.\n  Default is './varchive'")
+	flag.StringVar(&settings.outputRoot, "outputRoot", "out",
+		"location for output files.\n  Default is './out'")
+
+	flag.StringVar(&settings.logToFile, "log", "",
+		"location for lof files.\n  Default is nothing, i.e. log to standard output")
 
 	flag.StringVar(&settings.width, "width", "",
 		"pixel width of output files.\n  Default is 'do not adjust'")
