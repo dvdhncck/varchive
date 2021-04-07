@@ -19,6 +19,8 @@ type Settings struct {
 	maxParallelTasks int
 
 	encodeMode string
+	width      string
+	height     string
 	quality    int
 	fixAudio   bool
 	decomb     bool
@@ -46,6 +48,14 @@ func ParseArguments() *Settings {
 
 	flag.StringVar(&settings.outputRoot, "outputRoot", "varchive",
 		"location for output files.\n  Default is './varchive'")
+
+	flag.StringVar(&settings.width, "width", "",
+		"pixel width of output files.\n  Default is 'do not adjust'")
+
+	flag.StringVar(&settings.height, "height", "",
+		"pixel height of output files.\n  Default is 'do not adjust'")
+
+	geometry := flag.String("geometry", "","geometry of output video.\n  Default is 'do not adjust'")
 
 	flag.Parse()
 
@@ -75,6 +85,10 @@ func ParseArguments() *Settings {
 		fatal(fmt.Sprintf("--encodeMode must be one of %s", validEncodeModeString))
 	}
 	
+	if *geometry != "" {
+		fatal ("too much geoms")
+	}
+
 	return settings
 }
 

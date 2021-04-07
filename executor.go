@@ -13,19 +13,31 @@ func doTranscode(task *Task) {
 	args := []string{
 		"--input", task.fileIn,
 		"--output", task.fileOut,
+
 		"--encoder", "x265",
+
 		"--quality", fmt.Sprintf("%d", settings.quality),
 		"--two-pass", "--turbo",
+
 		"--aencoder", "copy",
 
-		"--comb-detect=default",
-        "--decomb=eedi2bob",
+		"--loose-anamorphic"}
 
-		"--auto-anamorphic",
-        "--maxWidth", "960",
-        "--maxHeight", "540",
+	if settings.decomb {
+		args = append(args,
+			"--comb-detect=default",
+			"--decomb=eedi2bob")
+	}
 
-		"2>&1"}
+	if settings.width != "" {
+		args = append(args, "--width", settings.width)
+	}
+
+	if settings.height != "" {
+		args = append(args, "--height", settings.height)
+	}
+
+	args = append(args, "2>&1")
 
 	invoke("HandBrakeCLI", args)
 
@@ -35,7 +47,7 @@ func doTranscode(task *Task) {
 
 func doFixAudio(task *Task) {
 	audioStream := makeTemporaryFile(".mp3")
-	videoStream := makeTemporaryFile(".mov")    // TODO - perhaps match the original file extension to avoid confusing ffmpeg
+	videoStream := makeTemporaryFile(".mov") // TODO - perhaps match the original file extension to avoid confusing ffmpeg
 
 	// demux the video stream (leave encoding as is)
 	args := []string{
