@@ -1,9 +1,8 @@
-package main
+package varchive
 
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -12,36 +11,6 @@ func fatal(message string) {
 
 	fmt.Println(message)
 	os.Exit(1)
-}
-
-var settings *Settings
-
-func main() {
-	
-	initialiseLogging()
-
-	settings = ParseArguments() // guarantees that arguments are acceptable
-
-	tasks := GenerateTasks()
-
-	SortTasks(tasks)
-
-	if settings.verbose {
-		for _, task := range tasks {
-			log.Printf("%v\n\n", task)
-		}
-	}
-
-	ScheduleTasks(NewTimer(), tasks)
-}
-
-func initialiseLogging() {
-	// file, err := os.OpenFile("Scanner.log", os.O_CREATE|os.O_WRONLY, 0666)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	log.SetOutput(os.Stdout)
 }
 
 func createOutputRootIfRequired() {

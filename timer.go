@@ -1,21 +1,24 @@
-package main
+package varchive
 
 import (
 	"time"
 )
 
-// Timer wraps the required time.* functionality so we can unit test time-critical bits of the code
-// The rest of the code base should not import the "time" at all - but use a Timer when required
+// Timer provices a minimal wrapper around time.* so we can unit test time-critical 
+// bits of the code
+//
+// The rest of the code base should not import the "time" at all,
+// instead it should accept a Timer interface
 
 type Timestamp = time.Time
 
 type Timer interface {
 	Now() Timestamp
 	SecondsSince(Timestamp) float64
-	MilliSleep(int64) // needs to take a Timer*....
+	MilliSleep(int64)
 }
 
-// the default implementation defers to the real time.* methods
+// the default implementation delegates to the real time.* methods
 
 func NewTimer() Timer {
 	return timerImpl{}

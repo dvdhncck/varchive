@@ -1,4 +1,4 @@
-package main
+package varchive
 
 import (
 	"flag"
@@ -26,7 +26,13 @@ type Settings struct {
 	decomb     bool
 }
 
-func ParseArguments() *Settings {
+var settings Settings
+
+func IsVerbose() bool {
+	return settings.verbose
+}
+
+func ParseArguments() {
 
 	validEncodeModes := []string{"basic", "decomb", "minimise"}
 	validEncodeModeString := fmt.Sprintf("'%s'", strings.Join(validEncodeModes, "','"))
@@ -88,8 +94,6 @@ func ParseArguments() *Settings {
 	if *geometry != "" {
 		fatal ("too much geoms")
 	}
-
-	return settings
 }
 
 func notIn(options []string, thing string) bool {

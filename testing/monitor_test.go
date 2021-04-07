@@ -4,17 +4,18 @@ import (
 	"fmt"
 	"testing"
 	"math"
+	"davidhancock.com/varchive"
 )
 
 const TASK = 1
 
 func Test_estimationAfterOneTask(t *testing.T) {
 
-	task1 := NewTask(TASK, "", "", 3000)
-	tasks := []*Task{task1}
+	task1 := varchive.NewTask(TASK, "", "", 3000)
+	tasks := []*varchive.Task{task1}
 
 	timer := NewDeterministicTimer()
-	m := NewMonitor(timer, tasks, NewDisplay())
+	m := varchive.NewMonitor(timer, tasks, varchive.NewDisplay())
 
 	m.NotifyTaskBegins(task1)
 	timer.AdvanceSeconds(6)
@@ -30,14 +31,14 @@ func Test_estimationAfterTwoSerialTasks(t *testing.T) {
 
 	expected, actual := float64(0), float64(0)
 
-	task1 := NewTask(TASK, "", "", 3000)
-	task2 := NewTask(TASK, "", "", 2000)
+	task1 := varchive.NewTask(TASK, "", "", 3000)
+	task2 := varchive.NewTask(TASK, "", "", 2000)
 
-	tasks := []*Task{task1, task2}
+	tasks := []*varchive.Task{task1, task2}
 
 	timer := NewDeterministicTimer()
 
-	m := NewMonitor(timer, tasks, NewDisplay())
+	m := varchive.NewMonitor(timer, tasks, varchive.NewDisplay())
 
 	m.NotifyTaskBegins(task1)
 
@@ -85,14 +86,14 @@ func Test_estimationAfterTwoSerialTasks(t *testing.T) {
 
 func Test_estimationAfterTwoParallelTasks(t *testing.T) {
 
-	task1 := NewTask(TASK, "", "", 3000)
-	task2 := NewTask(TASK, "", "", 2000)
+	task1 := varchive.NewTask(TASK, "", "", 3000)
+	task2 := varchive.NewTask(TASK, "", "", 2000)
 
-	tasks := []*Task{task1, task2}
+	tasks := []*varchive.Task{task1, task2}
 
 	timer := NewDeterministicTimer()
 
-	m := NewMonitor(timer, tasks, NewDisplay())
+	m := varchive.NewMonitor(timer, tasks, varchive.NewDisplay())
 
 	m.NotifyTaskBegins(task1)
 	m.NotifyTaskBegins(task2)
@@ -111,7 +112,7 @@ func Test_estimationAfterTwoParallelTasks(t *testing.T) {
 }
 
 func Test_estimationWhenTaskIsOverrunning(t *testing.T) {
-	fatal("not implemented")
+	t.Fatal("not implemented")
 }
 
 func assertEqual(t *testing.T, message string, expected interface{}, actual interface{}) {

@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 	"time"
+	va "davidhancock.com/varchive"
 )
 
 func Test_deterministicTimerShouldAdvance(t *testing.T) {
@@ -11,12 +12,12 @@ func Test_deterministicTimerShouldAdvance(t *testing.T) {
 	
 	start := timer.Now();
 
-	timer.AdvanceSeconds(7)
+	timer.AdvanceSeconds(7.0)
 
 	delta := timer.SecondsSince(start)
 
 	if delta != 7.0 {
-		fatal("Fail, did not advance as expected")
+		t.Fatal("Fail, did not advance as expected")
 	}
 }
 
@@ -33,24 +34,24 @@ func Test_deterministicTimerShouldSleep(t *testing.T) {
 	delta := after.Sub(before).Milliseconds()
 
 	if delta != 500 {
-		fatal("Fail, did not sleep as expected")
+		t.Fatal("Fail, did not sleep as expected")
 	}
 }
 
 
 type DeterministicTimer struct{
-	now Timestamp
+	now va.Timestamp
 }
 
 func NewDeterministicTimer() *DeterministicTimer {
 	return &DeterministicTimer{time.Now()}
 }
 
-func (t *DeterministicTimer) Now() Timestamp { 
+func (t *DeterministicTimer) Now() va.Timestamp { 
 	return t.now
 }
 
-func (t *DeterministicTimer) SecondsSince(ago Timestamp) float64 { 
+func (t *DeterministicTimer) SecondsSince(ago va.Timestamp) float64 { 
 	return t.Now().Sub(ago).Seconds()  
 }
 
