@@ -23,4 +23,3 @@ func main() {
 
 	va.ScheduleTasks(va.NewTimer(), tasks)
 }
-

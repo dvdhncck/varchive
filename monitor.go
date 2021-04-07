@@ -3,7 +3,6 @@ package varchive
 import (
 	"fmt"
 	"log"
-	"math"
 	"sync"
 )
 
@@ -60,7 +59,7 @@ func (m *Monitor) NotifyTaskEnds(task *Task) {
 
 	for index, t := range m.activeTasks {
 		if t.id == task.id {
-			bytesPerSecond := float64(task.inputSize) / float64(task.runTimeInSeconds)
+			bytesPerSecond := int64(float64(task.inputSize) / float64(task.runTimeInSeconds))
 
 			m.stats.tasksCompleted++
 			m.stats.tasksRemaining--
@@ -68,7 +67,7 @@ func (m *Monitor) NotifyTaskEnds(task *Task) {
 			m.updateEstimates(task)
 
 			m.addMessage(fmt.Sprintf("Completed task %s in %v (%v/s)",
-				task.BriefString(), niceTime(task.runTimeInSeconds), niceSize(int64(bytesPerSecond))))
+				task.BriefString(), niceTime(task.runTimeInSeconds), niceSize(bytesPerSecond)))
 
 			// rebuild the activeTasks list with the index'th element removed
 			m.activeTasks = append(m.activeTasks[:index], m.activeTasks[index+1:]...)
@@ -136,25 +135,6 @@ func (m *Monitor) Start() {
 	}(m)
 }
 
-func niceTime(seconds float64) string {
-	if math.IsInf(seconds, +1) || seconds < 0 {
-		return "---:--:--"
-	}
-
-	const spm = 60
-	const sph = 60 * 60
-	h, m, s := 0, 0, int64(seconds)
-	for s > sph {
-		h++
-		s -= sph
-	}
-	for s > spm {
-		m++
-		s -= spm
-	}
-	return fmt.Sprintf("%03d:%02d:%02d", h, m, s)
-}
-
 func (m *Monitor) addMessage(message string) {
 	for i := maxMessages - 1; i > 0; i-- {
 		m.messages[i] = m.messages[i-1]
@@ -187,6 +167,10 @@ func (m *Monitor) updateEstimates(task *Task) {
 	ebpsAllWorkers := e.totalInputSize[taskType] / e.totalRunTime[taskType]
 
 	e.estimatedBytesPerSecond[taskType] = ebpsAllWorkers * float64(workersOfThisType)
+
+	m.addMessage(fmt.Sprintf("Estimates computed: FixAudio %s kps, Transcode %s kps",
+		niceSize(int64(e.estimatedBytesPerSecond[FixAudio])), 
+		niceSize(int64(e.estimatedBytesPerSecond[Transcode]))))
 }
 
 func (m *Monitor) EstimateBytesPerSecond(taskType TaskType) float64 {

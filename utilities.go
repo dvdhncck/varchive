@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"math"
 )
 
 func fatal(message string) {
@@ -64,4 +65,23 @@ func niceSize(bytes int64) string {
 	}
 	return fmt.Sprintf("%.1f %ciB",
 		float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+func niceTime(seconds float64) string {
+	if math.IsInf(seconds, +1) || seconds < 0 {
+		return "---:--:--"
+	}
+
+	const spm = 60
+	const sph = 60 * 60
+	h, m, s := 0, 0, int64(seconds)
+	for s > sph {
+		h++
+		s -= sph
+	}
+	for s > spm {
+		m++
+		s -= spm
+	}
+	return fmt.Sprintf("%03d:%02d:%02d", h, m, s)
 }
