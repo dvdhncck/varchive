@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
-	"strings"
 )
 
 func doTranscode(task *Task) {
@@ -133,27 +131,5 @@ func ExecuteTask(task *Task) {
 
 	case Concatenate:
 		doConcatenate(task)
-	}
-}
-
-func invoke(command string, args []string) {
-
-	if settings.verbose {
-		log.Printf("Invoking: %s %s", command, strings.Join(args, ` `))
-	}
-
-	if settings.dryRun {
-		return
-	} else {
-		output, err := exec.Command(command, args...).Output()
-
-		if err == nil {
-			if settings.verbose {
-				log.Printf("Return ok, stdout: %v", string(output))
-			}
-		} else {
-			log.Fatal(fmt.Sprintf("Failed: %s %s\nErr: %v\nStdout: %v",
-				command, strings.Join(args, ` `), err, string(output)))
-		}
 	}
 }

@@ -20,6 +20,50 @@ func NewConcatenateTask(fileOut string, dependsOn []*Task) *Task {
 	return task
 }
 
+func GetBusy() {
+
+	if settings.reportSizes {
+		ReportSizes()
+	} else {
+		tasks := GenerateTasks()
+
+		SortTasks(tasks)
+
+		if settings.verbose {
+			for _, task := range tasks {
+				log.Printf("%v\n\n", task)
+			}
+		}
+		ScheduleTasks(NewTimer(), tasks)
+	}
+}
+
+func ReportSizes() {
+	paths := ScanPaths()
+
+	widths := NewHisto()
+	heights := NewHisto()
+
+	for path, files := range paths {
+		if settings.verbose {
+			log.Printf("Path: %s has %d files\n", path, len(files))
+		}
+
+		for _, file := range files {
+			width, height, err := GetVideoInfo(file.path)
+			if err == nil {
+				log.Printf("%s %dx%d", file.path, width, height)
+				widths.Add(width)
+				heights.Add(height)
+			} else {
+				log.Printf("%s %s", file.path, err.Error())
+			}
+		}
+	}
+
+	log.Printf("\n\n  Widths:\n%v\n  Heights:\n%v", widths, heights)
+}
+
 func GenerateTasks() []*Task {
 
 	if settings.verbose {

@@ -6,12 +6,38 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"log"
+	"os/exec"
+	"strings"
 )
 
 func fatal(message string) {
 
 	fmt.Println(message)
 	os.Exit(1)
+}
+
+func invoke(command string, args []string) string {
+
+	if settings.verbose {
+		log.Printf("Invoking: %s %s", command, strings.Join(args, ` `))
+	}
+
+	if ! settings.dryRun {
+		output, err := exec.Command(command, args...).Output()
+
+		if err == nil {
+			if settings.verbose {
+				log.Printf("Return ok, stdout: %v", string(output))
+			}
+			return string(output)
+		} else {
+			log.Fatal(fmt.Sprintf("Failed: %s %s\nErr: %v\nStdout: %v",
+				command, strings.Join(args, ` `), err, string(output)))
+		}
+	}
+	
+	return ""
 }
 
 func createOutputRootIfRequired() {

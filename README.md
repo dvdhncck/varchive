@@ -17,3 +17,11 @@ actually, rather horribly after the update the go1.16, I had to
 go get github.com/rthornton128/goncurses
 
 sudo ln -s /home/dave/projects/go/pkg/mod/pkg/mod/github.com/rthornton128/goncurses@v0.0.0-20210302221415-1355ee05acae /usr/local/go/src/goncurses
+
+
+Workflow
+
+$ go install main/varchive.go
+
+$ varchive -reportSizes testing/test-data/one/
+

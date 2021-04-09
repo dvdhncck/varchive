@@ -57,7 +57,7 @@ func ScanPaths() map[string]FilesWithSize {
 				panic(err)
 			}
 		} else {
-			fatal(fmt.Sprintf("Only paths can be specified, %v is a file", path))
+			log.Printf("%v is a file and will be ignored", path)
 		}
 
 		pathsAndFiles[path] = filesForPath

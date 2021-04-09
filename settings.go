@@ -20,13 +20,10 @@ type Settings struct {
 	quality          int
 	fixAudio         bool
 	decomb           bool
+	reportSizes      bool
 }
 
 var settings = Settings{}
-
-func IsVerbose() bool {
-	return settings.verbose
-}
 
 func ParseArguments() {
 
@@ -39,6 +36,8 @@ func ParseArguments() {
 	flag.BoolVar(&settings.decomb, "decomb", false, "use de-interlacing")
 	flag.BoolVar(&settings.fixAudio, "fixAudio", false, "attempt to repair the dodgy audio found on some older files")
 	flag.IntVar(&settings.quality, "quality", 20, "encode quality.\nSmaller numbers are better quality, but slower to encode\n")
+
+	flag.BoolVar(&settings.reportSizes, "reportSizes", false, "scan all files and report their video geometry.\nDoes not do any transcoding.")
 
 	flag.StringVar(&settings.outputRoot, "outputRoot", "out",
 		"location for output files.\nWill be created if required.\n")
