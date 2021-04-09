@@ -27,7 +27,7 @@ type Monitor struct {
 	timer       Timer
 	lock        sync.Mutex
 	activeTasks []*Task
-	display     *Display
+	display     Display
 	messages    [maxMessages]*string
 	stats       Stats
 	estimator   Estimator
@@ -36,12 +36,6 @@ type Monitor struct {
 func (m *Monitor) ShutdownCleanly() {
 	log.Printf("Clean shutdown requested")
 	m.display.Close()
-}
-
-func (m *Monitor) UpdateTaskRunTimes() {
-	for _, task := range m.activeTasks {
-		task.runTimeInSeconds = m.timer.SecondsSince(task.startTimestamp)
-	}
 }
 
 func (m *Monitor) NotifyTaskBegins(task *Task) {
@@ -77,7 +71,7 @@ func (m *Monitor) NotifyTaskEnds(task *Task) {
 	}
 }
 
-func NewMonitor(timer Timer, tasks []*Task, display *Display) *Monitor {
+func NewMonitor(timer Timer, tasks []*Task, display Display) *Monitor {
 	activeTasks := []*Task{}
 	messages := [maxMessages]*string{}
 	estimator := Estimator{[TaskTypeCount]float64{}, [TaskTypeCount]float64{}, [TaskTypeCount]float64{}}
@@ -96,47 +90,52 @@ func NewMonitor(timer Timer, tasks []*Task, display *Display) *Monitor {
 func (m *Monitor) Start() {
 	m.display.Init()
 	defer m.display.Close()
-
-	go func(m *Monitor) {
+	
+	go func() {
 
 		startTimestamp := m.timer.Now()
 
 		for {
-			m.lock.Lock()
-
-			m.UpdateTaskRunTimes()
-
-			m.display.Clear()
-			m.display.Write(fmt.Sprintf("%d beavers employed, %d tasks completed, %d remaining\n",
-				len(m.activeTasks), m.stats.tasksCompleted, m.stats.tasksRemaining))
-			m.display.Write("Task     Purpose       Size          Run time        ETA")
-			m.display.Write("-------+------------+-------------+---------------+----------------")
-
-			for _, task := range m.activeTasks {
-				m.display.Write(fmt.Sprintf("%4d    %-13s%11s   %-16s%-16s",
-					task.id,
-					task.TaskType(),
-					task.Size(),
-					niceTime(task.runTimeInSeconds),
-					niceTime(m.EstimateTimeRemaining(task))))
-			}
-
 			runTime := m.timer.SecondsSince(startTimestamp)
-			m.display.Write(fmt.Sprintf("\nElapsed: %s", niceTime(runTime)))
-
-			m.display.Write("\nRecently:")
-			for _, message := range m.messages {
-				m.display.Write(fmt.Sprintf("   %s", *message))
-			}
-			m.display.Flush()
-			m.lock.Unlock()
-
+			m.tick(runTime)
 			m.timer.MilliSleep(1000)
 		}
-	}(m)
+	}()
+}
+
+func (m *Monitor) tick(runTimeInSecond float64) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.display.Clear()
+	m.display.Write(fmt.Sprintf("%d beavers employed, %d tasks completed, %d remaining\n",
+		len(m.activeTasks), m.stats.tasksCompleted, m.stats.tasksRemaining))
+	m.display.Write("Task     Purpose       Size          Run time        ETA")
+	m.display.Write("-------+------------+-------------+---------------+----------------")
+
+	for _, task := range m.activeTasks {
+
+		task.runTimeInSeconds = m.timer.SecondsSince(task.startTimestamp)
+
+		m.display.Write(fmt.Sprintf("%4d    %-13s%11s   %-16s%-16s",
+			task.id,
+			task.TaskType(),
+			task.Size(),
+			niceTime(task.runTimeInSeconds),
+			niceTime(m.EstimateTimeRemaining(task))))
+	}
+
+	m.display.Write(fmt.Sprintf("\nElapsed: %s", niceTime(runTimeInSecond)))
+
+	m.display.Write("\nRecently:")
+	for _, message := range m.messages {
+		m.display.Write(fmt.Sprintf("   %s", *message))
+	}
+	m.display.Flush()
 }
 
 func (m *Monitor) addMessage(message string) {
+	log.Println(message) // the permanent record
 	for i := maxMessages - 1; i > 0; i-- {
 		m.messages[i] = m.messages[i-1]
 	}

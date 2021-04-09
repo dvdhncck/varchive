@@ -4,15 +4,24 @@ import (
 	"goncurses"
 )
 
-type Display struct {
+type Display interface {
+	Init() 
+	Clear() 
+	Write(message string) 
+	Close() 
+	Flush() 
+}
+
+
+type DisplayImpl struct {
 	window *goncurses.Window
 }
 
-func NewDisplay() *Display {
-	return &Display{&goncurses.Window{}}
+func NewDisplay() DisplayImpl {
+	return DisplayImpl{&goncurses.Window{}}
 }
 
-func (d *Display) Init() {
+func (d DisplayImpl) Init() {
 	window, err := goncurses.Init()
 
 	if err != nil {
@@ -21,18 +30,18 @@ func (d *Display) Init() {
 	d.window = window
 }
 
-func (d *Display) Clear() {
+func (d DisplayImpl) Clear() {
 	d.window.Erase()
 }
 
-func (d *Display) Write(message string) {
+func (d DisplayImpl) Write(message string) {
 	d.window.Println(message)
 }
 
-func (d *Display) Close() {
+func (d DisplayImpl) Close() {
 	goncurses.End()
 }
 
-func (d *Display) Flush() {
+func (d DisplayImpl) Flush() {
 	d.window.Refresh()
 }

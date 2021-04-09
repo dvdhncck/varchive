@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
-	"testing"
+	"log"
 	"math"
+	"testing"
+
 	"davidhancock.com/varchive"
 )
 
@@ -15,7 +17,8 @@ func Test_estimationAfterOneTask(t *testing.T) {
 	tasks := []*varchive.Task{task1}
 
 	timer := NewDeterministicTimer()
-	m := varchive.NewMonitor(timer, tasks, varchive.NewDisplay())
+	m := varchive.NewMonitor(timer, tasks, NewNoOpDisplay())
+	m.Start()
 
 	m.NotifyTaskBegins(task1)
 	timer.AdvanceSeconds(6)
@@ -38,7 +41,8 @@ func Test_estimationAfterTwoSerialTasks(t *testing.T) {
 
 	timer := NewDeterministicTimer()
 
-	m := varchive.NewMonitor(timer, tasks, varchive.NewDisplay())
+	m := varchive.NewMonitor(timer, tasks, NewNoOpDisplay())
+	m.Start()
 
 	m.NotifyTaskBegins(task1)
 	timer.AdvanceSeconds(6)	
@@ -52,16 +56,12 @@ func Test_estimationAfterTwoSerialTasks(t *testing.T) {
 
 	timer.AdvanceSeconds(1)
 
-	m.UpdateTaskRunTimes()
-
 	// we have a estimate of 500/s based on task1, task 2 is 2000, estimate after 1s...
-	expected = (2000.0 / (3000.0 / 6.0)) - 1.0  
+	expected = (2000.0 / (3000.0 / 6.0)) - 1.0
 	actual = m.EstimateTimeRemaining(task2)
 	assertEqual(t, "2nd estimate using valid data", expected, actual)
 
 	timer.AdvanceSeconds(2)
-
-	m.UpdateTaskRunTimes()
 
 	// now, after 3s, we should forecast 1s remaining
 	expected = (2000.0 / (3000.0 / 6.0)) - 3.0 
@@ -87,7 +87,8 @@ func Test_estimationAfterTwoParallelTasks(t *testing.T) {
 
 	timer := NewDeterministicTimer()
 
-	m := varchive.NewMonitor(timer, tasks, varchive.NewDisplay())
+	m := varchive.NewMonitor(timer, tasks, NewNoOpDisplay())
+	m.Start()
 
 	m.NotifyTaskBegins(task1)
 	m.NotifyTaskBegins(task2)
@@ -109,19 +110,20 @@ func Test_estimationWhenTaskIsOverrunning(t *testing.T) {
 	task1 := varchive.NewTask(TASK, "", "", 3000)
 	task2 := varchive.NewTask(TASK, "", "", 3000)
 	tasks := []*varchive.Task{task1, task2}
+	
 	timer := NewDeterministicTimer()
-	m := varchive.NewMonitor(timer, tasks, varchive.NewDisplay())
-	//m.Start() // starting the monitor actually causes time to advance
+	m := varchive.NewMonitor(timer, tasks, NewNoOpDisplay())
+	m.Start() 
+
 	m.NotifyTaskBegins(task1)
 	timer.AdvanceSeconds(5)
 	m.NotifyTaskEnds(task1)
 
 	m.NotifyTaskBegins(task2)
 	timer.AdvanceSeconds(20)
-	
-	m.UpdateTaskRunTimes()  // GET RID OF THIS - but somehow without introducing artificial timing delays
-	
-	// we have an estimate, but task2 has overrun the predicated 5 seconds and still not finished
+		
+	// we have an estimate, but task2 has overrun the predicated 5 s
+	// seconds and still not finished, so we get a signal saying "I dunno"
 
 	expected := math.Inf(-1)
 	actual := m.EstimateTimeRemaining(task2)
@@ -133,7 +135,10 @@ func Test_estimationWhenNoDataAvailable(t *testing.T) {
 	task1 := varchive.NewTask(TASK, "", "", 3000)
 	tasks := []*varchive.Task{task1}
 	timer := NewDeterministicTimer()
-	m := varchive.NewMonitor(timer, tasks, varchive.NewDisplay())
+	
+	m := varchive.NewMonitor(timer, tasks, NewNoOpDisplay())
+	m.Start()
+	
 	m.NotifyTaskBegins(task1)
 
 	// we don't have an estimate yet as no tasks have completed
