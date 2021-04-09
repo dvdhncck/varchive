@@ -16,6 +16,10 @@ type FilesWithSize []*FileWithSize
 
 func ScanPaths() map[string]FilesWithSize {
 
+	if settings.verbose {
+		log.Println("Scanning paths")
+	}
+
 	pathsAndFiles := make(map[string]FilesWithSize)
 
 	for _, path := range settings.paths {

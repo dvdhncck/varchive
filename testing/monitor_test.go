@@ -16,7 +16,7 @@ func Test_estimationAfterOneTask(t *testing.T) {
 	tasks := []*varchive.Task{task1}
 
 	timer := NewDeterministicTimer()
-	m := varchive.NewMonitor(timer, tasks, NewNoOpDisplay())
+	m := varchive.NewMonitor(timer, tasks, varchive.NewNoOpDisplay())
 	m.Start()
 
 	m.NotifyTaskBegins(task1)
@@ -40,7 +40,7 @@ func Test_estimationAfterTwoSerialTasks(t *testing.T) {
 
 	timer := NewDeterministicTimer()
 
-	m := varchive.NewMonitor(timer, tasks, NewNoOpDisplay())
+	m := varchive.NewMonitor(timer, tasks, varchive.NewNoOpDisplay())
 	m.Start()
 
 	m.NotifyTaskBegins(task1)
@@ -86,7 +86,7 @@ func Test_estimationAfterTwoParallelTasks(t *testing.T) {
 
 	timer := NewDeterministicTimer()
 
-	m := varchive.NewMonitor(timer, tasks, NewNoOpDisplay())
+	m := varchive.NewMonitor(timer, tasks, varchive.NewNoOpDisplay())
 	m.Start()
 
 	m.NotifyTaskBegins(task1)
@@ -111,7 +111,7 @@ func Test_estimationWhenTaskIsOverrunning(t *testing.T) {
 	tasks := []*varchive.Task{task1, task2}
 	
 	timer := NewDeterministicTimer()
-	m := varchive.NewMonitor(timer, tasks, NewNoOpDisplay())
+	m := varchive.NewMonitor(timer, tasks, varchive.NewNoOpDisplay())
 	m.Start() 
 
 	m.NotifyTaskBegins(task1)
@@ -135,7 +135,7 @@ func Test_estimationWhenNoDataAvailable(t *testing.T) {
 	tasks := []*varchive.Task{task1}
 	timer := NewDeterministicTimer()
 	
-	m := varchive.NewMonitor(timer, tasks, NewNoOpDisplay())
+	m := varchive.NewMonitor(timer, tasks, varchive.NewNoOpDisplay())
 	m.Start()
 	
 	m.NotifyTaskBegins(task1)

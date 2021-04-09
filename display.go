@@ -13,6 +13,22 @@ type Display interface {
 }
 
 
+// handy for 'dry run' mode, or when no console is available
+type NoOpDisplay struct {}
+
+func NewNoOpDisplay() *NoOpDisplay { return &NoOpDisplay{} }
+
+func (*NoOpDisplay) Init() {}
+
+func (*NoOpDisplay) Clear() {}
+
+func (*NoOpDisplay) Write(string) {}
+
+func (*NoOpDisplay) Close() {}
+
+func (*NoOpDisplay) Flush() {}
+
+
 type DisplayImpl struct {
 	window *goncurses.Window
 }

@@ -22,6 +22,10 @@ func NewConcatenateTask(fileOut string, dependsOn []*Task) *Task {
 
 func GenerateTasks() []*Task {
 
+	if settings.verbose {
+		log.Println("Generating tasks")
+	}
+
 	createOutputRootIfRequired()
 
 	tasks := []*Task{}
@@ -30,7 +34,7 @@ func GenerateTasks() []*Task {
 
 	for path, files := range paths {
 		if settings.verbose {
-			log.Printf("%s : %v", path, files)
+			log.Printf("Path: %s has %d file\n", path, len(files))
 		}
 
 		concatenateDependees := []*Task{}
@@ -44,7 +48,8 @@ func GenerateTasks() []*Task {
 			tasks = append(tasks, transcodeTask)
 
 			if settings.fixAudio {
-				fixAudioFileOut := makeTemporaryFile(".mp4")
+				existingExtension := getFileExtension(fileIn.path)
+				fixAudioFileOut := makeTemporaryFile(existingExtension)
 				fixAudioTask := NewFixAudioTask(file, fixAudioFileOut)
 				fixAudioTask.inputSize = fileIn.size
 

@@ -7,13 +7,20 @@ import (
 
 func ScheduleTasks(timer Timer, tasks []*Task) {
 
+	if settings.verbose {
+		log.Println("Scheduling tasks")
+	}
+
 	completed := false
 	startTime := timer.Now()
 	waitGroup := new(sync.WaitGroup)
 	guard := make(chan int, settings.maxParallelTasks)
 
-	m := NewMonitor(timer, tasks, NewDisplay())
-	m.Start()
+	m := NewMonitor(timer, tasks, getSuitableDisplay())
+
+	if ! settings.dryRun {
+		m.Start()   // dont bother starting the monitor, we don't need the output
+	}
 
 	for !completed {
 
@@ -29,14 +36,14 @@ func ScheduleTasks(timer Timer, tasks []*Task) {
 			go func() {
 				defer waitGroup.Done()
 
-				m.NotifyTaskBegins(task)				
+				m.NotifyTaskBegins(task)
 
 				ExecuteTask(task)
-				
+
 				task.taskState = Complete
 
-				m.NotifyTaskEnds(task)	
-				
+				m.NotifyTaskEnds(task)
+
 				<-guard // consume an item from the channel, allowing another go routine to start
 			}()
 		} else {
@@ -61,9 +68,9 @@ func ScheduleTasks(timer Timer, tasks []*Task) {
 	for _, task := range tasks {
 		totalTime += task.runTimeInSeconds
 	}
-	
+
 	log.Printf("Total compute time: %s", niceTime(totalTime))
-	log.Printf("Speedup: %.2f", totalTime / runTime)
+	log.Printf("Efficiency: %.2f", totalTime/runTime/float64(settings.maxParallelTasks))
 }
 
 func findFirstRunnableTask(tasks []*Task) *Task {
@@ -83,4 +90,3 @@ func confirmThatAllTasksAreCompleted(tasks []*Task) bool {
 	}
 	return true
 }
-

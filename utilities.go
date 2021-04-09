@@ -3,9 +3,9 @@ package varchive
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
-	"math"
 )
 
 func fatal(message string) {
@@ -53,6 +53,10 @@ func removeTemporaryFile(path string) {
 	os.Remove(path)
 }
 
+func getFileExtension(path string) string {
+	return filepath.Ext(path)
+}
+
 func niceSize(bytes int64) string {
 	const unit = 1024
 	if bytes < unit {
@@ -84,4 +88,12 @@ func niceTime(seconds float64) string {
 		s -= spm
 	}
 	return fmt.Sprintf("%03d:%02d:%02d", h, m, s)
+}
+
+func getSuitableDisplay() Display {
+	if settings.dryRun {
+		return NewNoOpDisplay()
+	} else {
+		return NewDisplay()
+	}
 }

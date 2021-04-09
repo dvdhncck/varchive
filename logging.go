@@ -8,7 +8,7 @@ import (
 func InitialiseLogging() {
 
 	if settings.logToFile != "" {
-		file, err := os.OpenFile("Scanner.log", os.O_CREATE|os.O_WRONLY, 0666)
+		file, err := os.OpenFile("varchive.log", os.O_CREATE|os.O_WRONLY, 0666)
 		if err != nil {
 			fatal(err.Error())
 
@@ -17,5 +17,8 @@ func InitialiseLogging() {
 		}
 	} else {
 		log.SetOutput(os.Stdout)
+		if settings.verbose {
+			log.Println("Logging to StdOut")
+		}
 	}
 }
