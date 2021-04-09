@@ -10,8 +10,8 @@
 
 6. EXIF tag handling
 
-7. [IN PROGRESS] forecast run time based on measured bytes/second
+7. [DONE] forecast run time based on measured bytes/second
 
-8. In FixAudio, when demuxing, match the original file extension to avoid confusing ffmpeg
+8. [DONE] In FixAudio, when demuxing, match the original file extension to avoid confusing ffmpeg
 
-9. get rid of "workInfo" concept in monitor, just track Tasks directly
+9. [DONE] get rid of "workInfo" concept in monitor, just track Tasks directly
