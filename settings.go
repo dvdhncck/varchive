@@ -2,21 +2,17 @@ package varchive
 
 import (
 	"flag"
-	"fmt"
 	"log"
-	"strings"
 )
 
 type Settings struct {
-	paths []string
-
+	paths            []string
 	dryRun           bool
 	verbose          bool
-	singleThread     bool
 	outputRoot       string
 	logToFile        string
+	singleThread     bool
 	maxParallelTasks int
-	encodeMode       string
 	width            string
 	height           string
 	quality          int
@@ -32,9 +28,6 @@ func IsVerbose() bool {
 
 func ParseArguments() {
 
-	validEncodeModes := []string{"basic", "decomb", "minimise"}
-	validEncodeModeString := fmt.Sprintf("'%s'", strings.Join(validEncodeModes, "','"))
-
 	flag.BoolVar(&settings.verbose, "verbose", false, "be verbose")
 	flag.BoolVar(&settings.dryRun, "dryRun", false, "don't affect anything")
 	flag.BoolVar(&settings.singleThread, "singleThread", false, "do not parallelise tasks")
@@ -44,9 +37,6 @@ func ParseArguments() {
 	flag.BoolVar(&settings.decomb, "decomb", false, "use de-interlacing")
 	flag.BoolVar(&settings.fixAudio, "fixAudio", false, "fix dodgy audio (mystery audio stream on some older files")
 	flag.IntVar(&settings.quality, "quality", 20, "encode quality. Default 20.\n  Smaller numbers are better quality, but slower to encode")
-
-	flag.StringVar(&settings.encodeMode, "encodeMode", "",
-		fmt.Sprintf("encode mode.\nValid modes: %s", validEncodeModeString))
 
 	flag.StringVar(&settings.outputRoot, "outputRoot", "out",
 		"location for output files.\n  Default is './out'")
@@ -59,8 +49,6 @@ func ParseArguments() {
 
 	flag.StringVar(&settings.height, "height", "",
 		"pixel height of output files.\n  Default is 'do not adjust'")
-
-	geometry := flag.String("geometry", "", "geometry of output video.\n  Default is 'do not adjust'")
 
 	flag.Parse()
 
@@ -78,28 +66,7 @@ func ParseArguments() {
 		fatal("--maxParallelTasks must be 1 or more")
 	}
 
-	if settings.encodeMode == "" {
-		fatal("--encodeMode is required")
-	}
-
-	if notIn(validEncodeModes, settings.encodeMode) {
-		fatal(fmt.Sprintf("--encodeMode must be one of %s", validEncodeModeString))
-	}
-
-	if *geometry != "" {
-		fatal("too much geoms")
-	}
-
 	if settings.dryRun {
 		log.Print("Dry run mode enabled")
 	}
-}
-
-func notIn(options []string, thing string) bool {
-	for _, o := range options {
-		if o == thing {
-			return false
-		}
-	}
-	return true
 }

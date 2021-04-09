@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "/home/dave/projects/go/src/davidhancock.com/varchive/main/varchive.go",
-            "args": ["-encodeMode","basic","-fixAudio",
+            "args": ["-fixAudio","-decomb",
                 "-width","640","-height","480",
                 "-dryRun","-verbose",
                 "${workspaceFolder}/testing/test-data/one"]
