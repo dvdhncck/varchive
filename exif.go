@@ -40,7 +40,7 @@ func parseDimensions(line string) (int64, int64, error) {
 
 	width, height := int64(0), int64(0)
 
-	for i, _ := range matches {
+	for i := range matches {
 		switch names[i] {
 		case ``:
 			// ignore the whole group match

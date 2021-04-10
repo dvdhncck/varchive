@@ -33,11 +33,11 @@ type DisplayImpl struct {
 	window *goncurses.Window
 }
 
-func NewDisplay() DisplayImpl {
-	return DisplayImpl{&goncurses.Window{}}
+func NewDisplay() *DisplayImpl {
+	return &DisplayImpl{}
 }
 
-func (d DisplayImpl) Init() {
+func (d *DisplayImpl) Init() {
 	window, err := goncurses.Init()
 
 	if err != nil {
@@ -46,18 +46,18 @@ func (d DisplayImpl) Init() {
 	d.window = window
 }
 
-func (d DisplayImpl) Clear() {
+func (d *DisplayImpl) Clear() {
 	d.window.Erase()
 }
 
-func (d DisplayImpl) Write(message string) {
+func (d *DisplayImpl) Write(message string) {
 	d.window.Println(message)
 }
 
-func (d DisplayImpl) Close() {
+func (d *DisplayImpl) Close() {
 	goncurses.End()
 }
 
-func (d DisplayImpl) Flush() {
+func (d *DisplayImpl) Flush() {
 	d.window.Refresh()
 }

@@ -18,10 +18,8 @@ func ScheduleTasks(timer Timer, tasks []*Task) {
 
 	m := NewMonitor(timer, tasks, getSuitableDisplay())
 
-	if ! settings.dryRun {
-		m.Start()   // dont bother starting the monitor, we don't need the output
-	}
-
+	m.Start()
+	
 	for !completed {
 
 		guard <- 1 // blocks if the channel is full (i.e. enough go routines are running)
@@ -39,7 +37,7 @@ func ScheduleTasks(timer Timer, tasks []*Task) {
 				m.NotifyTaskBegins(task)
 
 				ExecuteTask(task)
-
+				
 				task.taskState = Complete
 
 				m.NotifyTaskEnds(task)

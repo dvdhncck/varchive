@@ -34,7 +34,7 @@ type Monitor struct {
 }
 
 func (m *Monitor) ShutdownCleanly() {
-	log.Printf("Clean shutdown requested")
+	log.Println("Clean shutdown requested")
 	m.display.Close()
 }
 
@@ -56,13 +56,13 @@ func (m *Monitor) NotifyTaskEnds(task *Task) {
 		if t.id == task.id {
 			bytesPerSecond := int64(float64(task.inputSize) / float64(task.runTimeInSeconds))
 
+			m.addMessage(fmt.Sprintf("Completed task %s in %v (%v/s)",
+				task.BriefString(), niceTime(task.runTimeInSeconds), niceSize(bytesPerSecond)))
+
 			m.stats.tasksCompleted++
 			m.stats.tasksRemaining--
 
 			m.updateEstimates(task)
-
-			m.addMessage(fmt.Sprintf("Completed task %s in %v (%v/s)",
-				task.BriefString(), niceTime(task.runTimeInSeconds), niceSize(bytesPerSecond)))
 
 			// rebuild the activeTasks list with the index'th element removed
 			m.activeTasks = append(m.activeTasks[:index], m.activeTasks[index+1:]...)
@@ -89,18 +89,18 @@ func NewMonitor(timer Timer, tasks []*Task, display Display) *Monitor {
 
 func (m *Monitor) Start() {
 	m.display.Init()
-	defer m.display.Close()
-	
-	go func() {
+	m.display.Clear()
 
-		startTimestamp := m.timer.Now()
+	go func(monitor *Monitor) {
+
+		startTimestamp := monitor.timer.Now()
 
 		for {
-			runTime := m.timer.SecondsSince(startTimestamp)
-			m.tick(runTime)
-			m.timer.MilliSleep(1000)
+			runTime := monitor.timer.SecondsSince(startTimestamp)
+			monitor.tick(runTime)
+			monitor.timer.MilliSleep(1000)
 		}
-	}()
+	}(m)
 }
 
 func (m *Monitor) tick(runTimeInSecond float64) {
@@ -131,11 +131,13 @@ func (m *Monitor) tick(runTimeInSecond float64) {
 	for _, message := range m.messages {
 		m.display.Write(fmt.Sprintf("   %s", *message))
 	}
+
 	m.display.Flush()
 }
 
 func (m *Monitor) addMessage(message string) {
 	log.Println(message) // the permanent record
+	
 	for i := maxMessages - 1; i > 0; i-- {
 		m.messages[i] = m.messages[i-1]
 	}
