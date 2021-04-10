@@ -1,3 +1,5 @@
 ./out
 out/**
 varchive
+testing/test-data/**
+*.log

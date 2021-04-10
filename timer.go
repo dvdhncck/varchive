@@ -28,4 +28,4 @@ type timerImpl struct{}
 
 func (timerImpl) Now() Timestamp                     { return time.Now() }
 func (timerImpl) SecondsSince(ago Timestamp) float64 { return time.Since(ago).Seconds() }
-func (timerImpl) MilliSleep(nap int64)               { time.Sleep(time.Duration(nap * time.Hour.Milliseconds())) }
+func (timerImpl) MilliSleep(nap int64)               { time.Sleep(time.Duration(nap * int64(time.Millisecond))) }

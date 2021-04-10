@@ -16,4 +16,6 @@
 
 009. [DONE] get rid of "workInfo" concept in monitor, just track Tasks directly
 
-010. read the geometry of the source file and behave cleverly w.r.t. scaling
+010. [PARTIAL] read the geometry of the source file and behave cleverly w.r.t. scaling
+
+011. adjust the estimation values based on measuring the accuracy of the last estimation
