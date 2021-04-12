@@ -1,9 +1,20 @@
 package varchive
 
 import (
+	"fmt"
 	"log"
 	"os"
 )
+
+func Log(message string, variables ...interface{}) {
+	if settings.logToFile != "" {
+		if len(variables) == 0 {
+			log.Println(message)
+		} else {
+			log.Println(fmt.Sprintf(message, variables...))
+		}
+	}
+}
 
 func InitialiseLogging() {
 

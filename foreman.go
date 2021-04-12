@@ -1,7 +1,6 @@
 package varchive
 
 import (
-	"log"
 	"path/filepath"
 	"sort"
 )
@@ -31,7 +30,7 @@ func GetBusy() {
 
 		if settings.verbose {
 			for _, task := range tasks {
-				log.Printf("%v\n\n", task)
+				Log("%v\n", task)
 			}
 		}
 		ScheduleTasks(NewTimer(), tasks)
@@ -46,28 +45,28 @@ func ReportSizes() {
 
 	for path, files := range paths {
 		if settings.verbose {
-			log.Printf("Path: %s has %d files\n", path, len(files))
+			Log("Path: %s has %d files", path, len(files))
 		}
 
 		for _, file := range files {
 			width, height, err := GetVideoInfo(file.path)
 			if err == nil {
-				log.Printf("%s %dx%d", file.path, width, height)
+				Log("%s %dx%d", file.path, width, height)
 				widths.Add(width)
 				heights.Add(height)
 			} else {
-				log.Printf("%s %s", file.path, err.Error())
+				Log("%s %s", file.path, err.Error())
 			}
 		}
 	}
 
-	log.Printf("\n\n  Widths:\n%v\n  Heights:\n%v", widths, heights)
+	Log("\n\n  Widths:\n%v\n  Heights:\n%v", widths, heights)
 }
 
 func GenerateTasks() []*Task {
 
 	if settings.verbose {
-		log.Println("Generating tasks")
+		Log("Generating tasks")
 	}
 
 	createOutputRootIfRequired()
@@ -78,7 +77,7 @@ func GenerateTasks() []*Task {
 
 	for path, files := range paths {
 		if settings.verbose {
-			log.Printf("Path: %s has %d file\n", path, len(files))
+			Log("Path: %s has %d file(s)", path, len(files))
 		}
 
 		concatenateDependees := []*Task{}
@@ -114,6 +113,8 @@ func GenerateTasks() []*Task {
 		finalTask := NewConcatenateTask(finalFileOut, concatenateDependees)
 		tasks = append(tasks, finalTask)
 	}
+
+	Log("%d tasks to be scheduled", len(tasks))
 
 	return tasks
 }

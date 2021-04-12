@@ -2,7 +2,6 @@ package varchive
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -17,7 +16,7 @@ type FilesWithSize []*FileWithSize
 func ScanPaths() map[string]FilesWithSize {
 
 	if settings.verbose {
-		log.Println("Scanning paths")
+		Log("Scanning paths")
 	}
 
 	pathsAndFiles := make(map[string]FilesWithSize)
@@ -25,19 +24,19 @@ func ScanPaths() map[string]FilesWithSize {
 	for _, path := range settings.paths {
 
 		if settings.verbose { 
-			log.Printf("Scanning %s....\n", path)
+			Log("Scanning %s....", path)
 		}
 
 		fileInfo, err := os.Stat(path)
 		if err != nil {
-			log.Fatal(err)
+			fatal(err.Error())
 		}
 
 		filesForPath := FilesWithSize{}
 
 		if fileInfo.IsDir() {
 			if settings.verbose { 
-				log.Printf("%s is a directory\n", path)
+				Log("%s is a directory", path)
 			}
 			err := filepath.Walk(path, func(walkedPath string, fileInfo os.FileInfo, err error) error {
 				if err == nil {
@@ -57,7 +56,7 @@ func ScanPaths() map[string]FilesWithSize {
 				panic(err)
 			}
 		} else {
-			log.Printf("%v is a file and will be ignored", path)
+			Log("%v is a file and will be ignored", path)
 		}
 
 		pathsAndFiles[path] = filesForPath

@@ -3,7 +3,6 @@ package varchive
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 )
 
@@ -62,7 +61,7 @@ func ParseArguments() {
 	}
 
 	if settings.verbose {
-		log.Printf("Settings: %v", settings)
+		Log("Settings: %v", settings)
 	}
 
 	if settings.singleThread {
@@ -74,6 +73,6 @@ func ParseArguments() {
 	}
 
 	if settings.dryRun {
-		log.Print("Dry run mode enabled")
+		Log("Dry run mode enabled")
 	}
 }

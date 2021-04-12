@@ -7,8 +7,9 @@ import (
 func main() {
 
 	va.ParseArguments() // guarantees that arguments are acceptable
-
-	va.InitialiseLogging()
 	
+	va.InitialiseLogging()
+
 	va.GetBusy()
+
 }

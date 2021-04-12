@@ -1,14 +1,13 @@
 package varchive
 
 import (
-	"log"
 	"sync"
 )
 
 func ScheduleTasks(timer Timer, tasks []*Task) {
 
 	if settings.verbose {
-		log.Println("Scheduling tasks")
+		Log("Scheduling tasks")
 	}
 
 	completed := false
@@ -60,15 +59,15 @@ func ScheduleTasks(timer Timer, tasks []*Task) {
 	m.ShutdownCleanly()
 
 	runTime := timer.SecondsSince(startTime)
-	log.Printf("Elapsed (real) time: %s", niceTime(runTime))
+	Log("Elapsed (real) time: %s", niceTime(runTime))
 
 	totalTime := 0.0
 	for _, task := range tasks {
 		totalTime += task.runTimeInSeconds
 	}
 
-	log.Printf("Total compute time: %s", niceTime(totalTime))
-	log.Printf("Efficiency: %.2f", totalTime/runTime/float64(settings.maxParallelTasks))
+	Log("Total compute time: %s", niceTime(totalTime))
+	Log("Efficiency: %.2f", totalTime/runTime/float64(settings.maxParallelTasks))
 }
 
 func findFirstRunnableTask(tasks []*Task) *Task {

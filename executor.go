@@ -3,7 +3,6 @@ package varchive
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 )
 
@@ -91,14 +90,14 @@ func doConcatenate(task *Task) {
 		writer := bufio.NewWriter(fileHandle)
 		for _, dependee := range task.dependsOn {
 			if settings.verbose {
-				log.Printf("Add file %s", dependee.fileOut)
+				Log("Add file %s", dependee.fileOut)
 			}
 			fmt.Fprintf(writer, "file %s\n", dependee.fileOut)
 		}
 		writer.Flush()
 		fileHandle.Close()
 		if settings.verbose {
-			log.Printf("Wrote concatenation list to %s", listFile)
+			Log("Wrote concatenation list to %s", listFile)
 		}
 	} else {
 		fatal(fmt.Sprintf("Could not open %s for the concatenation list", listFile))

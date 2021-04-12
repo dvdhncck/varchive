@@ -29,6 +29,13 @@ func GetVideoInfo(path string) (int64, int64, error) {
 	return 0, 0, errors.New("ImageSize tag not found")
 }
 
+/** 
+
+sample output from ffprobe
+
+Stream #0:0[0x1011]: Video: h264 (High) (HDMV / 0x564D4448), yuv420p(top first), 1920x1080 [SAR 1:1 DAR 16:9], 25 fps, 50 tbr, 90k tbn, 50 tbc
+
+*/
 
 func parseDimensions(line string) (int64, int64, error) {
 	// line is of the form:

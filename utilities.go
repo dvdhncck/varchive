@@ -6,7 +6,6 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"log"
 	"os/exec"
 	"strings"
 )
@@ -20,7 +19,7 @@ func fatal(message string) {
 func invoke(command string, args []string) string {
 
 	if settings.verbose {
-		log.Printf("Invoking: %s %s", command, strings.Join(args, ` `))
+		Log("Invoking: %s %s", command, strings.Join(args, ` `))
 	}
 
 	if ! settings.dryRun {
@@ -28,12 +27,12 @@ func invoke(command string, args []string) string {
 
 		if err == nil {
 			if settings.verbose {
-				log.Printf("Return ok, stdout: %v", string(output))
+				Log("Return ok, stdout: %v", string(output))
 			}
 			return string(output)
 		} else {
-			log.Fatal(fmt.Sprintf("Failed: %s %s\nErr: %v\nStdout: %v",
-				command, strings.Join(args, ` `), err, string(output)))
+			Log("Failed: %s %s\nErr: %v\nStdout: %v",
+				command, strings.Join(args, ` `), err, string(output))
 		}
 	}
 	

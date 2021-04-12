@@ -2,7 +2,6 @@ package varchive
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"sync"
 )
@@ -33,7 +32,7 @@ type Monitor struct {
 }
 
 func (m *Monitor) ShutdownCleanly() {
-	log.Println("Clean shutdown requested")
+	Log("Clean shutdown requested")
 	m.display.Close()
 }
 
@@ -107,8 +106,6 @@ func (m *Monitor) tick(runTimeInSecond float64) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	log.Println("Tick")
-
 	m.display.Clear()
 
 	m.display.Write(fmt.Sprintf("%d beavers employed, %d tasks completed, %d remaining\n",
@@ -139,7 +136,7 @@ func (m *Monitor) tick(runTimeInSecond float64) {
 }
 
 func (m *Monitor) addMessage(message string) {
-	log.Println(message) // the permanent record
+	Log(message) // the permanent record
 	
 	for i := maxMessages - 1; i > 0; i-- {
 		m.messages[i] = m.messages[i-1]
@@ -167,8 +164,7 @@ func (m *Monitor) updateEstimates(task *Task) {
 	estimated := m.EstimateRuntime(task)
 	actual := task.runTimeInSeconds
 	error := math.Abs(estimated - actual) / actual   // bigger values are worse
-	log.Printf("Estimation error: %.2f  (e=%f, a=%f)", error, estimated, actual)
-
+	Log("Estimation error: %.2f  (e=%f, a=%f)", error, estimated, actual)
 	
 	workersOfThisType := m.countWorkersOfType(task.taskType)
 
