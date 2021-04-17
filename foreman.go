@@ -3,6 +3,7 @@ package varchive
 import (
 	"path/filepath"
 	"sort"
+	"fmt"
 )
 
 func NewFixAudioTask(fileIn *FileWithSize, fileOut string) *Task {
@@ -24,6 +25,10 @@ func GetBusy() {
 	if settings.reportSizes {
 		ReportSizes()
 	} else {
+		if settings.verbose {
+			Log("Settings: %v", settings)
+		}
+	
 		tasks := GenerateTasks()
 
 		SortTasks(tasks)
@@ -42,6 +47,7 @@ func ReportSizes() {
 
 	widths := NewHisto()
 	heights := NewHisto()
+	fpses := NewHisto()
 
 	for path, files := range paths {
 		if settings.verbose {
@@ -49,18 +55,19 @@ func ReportSizes() {
 		}
 
 		for _, file := range files {
-			width, height, err := GetVideoInfo(file.path)
+			info, err := GetVideoInfoUsingFfProbe(file.path)
 			if err == nil {
-				Log("%s %dx%d", file.path, width, height)
-				widths.Add(width)
-				heights.Add(height)
+				Log("%s %dx%d %.2f (%.2f)", file.path, info.Width, info.Height, info.Fps, info.Tbr)
+				widths.Add(fmt.Sprintf("%d", info.Width))
+				heights.Add(fmt.Sprintf("%d", info.Height))
+				fpses.Add(fmt.Sprintf("%.2f", info.Fps))
 			} else {
 				Log("%s %s", file.path, err.Error())
 			}
 		}
 	}
 
-	Log("\n\n  Widths:\n%v\n  Heights:\n%v", widths, heights)
+	Log("\n\n  Widths:\n%v\n  Heights:\n%v  FPSes:\n%v", widths, heights, fpses)
 }
 
 func GenerateTasks() []*Task {

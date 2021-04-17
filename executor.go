@@ -34,6 +34,10 @@ func doTranscode(task *Task) {
 		args = append(args, "--height", settings.height)
 	}
 
+	if settings.fps != "" {
+		args = append(args, "--rate", settings.fps)
+	}
+
 	args = append(args, "2>&1")
 
 	invoke("HandBrakeCLI", args)

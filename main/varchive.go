@@ -11,5 +11,4 @@ func main() {
 	va.InitialiseLogging()
 
 	va.GetBusy()
-
 }

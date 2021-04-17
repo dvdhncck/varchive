@@ -7,19 +7,21 @@ import (
 )
 
 type Settings struct {
-	paths            []string
-	dryRun           bool
-	verbose          bool
-	outputRoot       string
-	logToFile        string
-	singleThread     bool
-	maxParallelTasks int
-	width            string
-	height           string
-	quality          int
-	fixAudio         bool
-	decomb           bool
-	reportSizes      bool
+	paths                []string
+	dryRun               bool
+	verbose              bool
+	outputRoot           string
+	logToFile            string
+	consoleOutputAllowed bool
+	singleThread         bool
+	maxParallelTasks     int
+	width                string
+	height               string
+	fps                  string
+	quality              int
+	fixAudio             bool
+	decomb               bool
+	reportSizes          bool
 }
 
 var settings = Settings{}
@@ -44,11 +46,14 @@ func ParseArguments() {
 	flag.StringVar(&settings.logToFile, "log", "",
 		"location for log files.\n (default is nothing, i.e. log to standard output)")
 
+	flag.StringVar(&settings.fps, "fps", "",
+		"frames-per-second for output file.\n (default is 'do not adjust')")
+
 	flag.StringVar(&settings.width, "width", "",
-		"pixel width of output files.\n (default is 'do not adjust')")
+		"pixel width of output file.\n (default is 'do not adjust')")
 
 	flag.StringVar(&settings.height, "height", "",
-		"pixel height of output files.\n (default is 'do not adjust')")
+		"pixel height of output file.\n (default is 'do not adjust')")
 
 	flag.Parse()
 
@@ -60,10 +65,6 @@ func ParseArguments() {
 		os.Exit(1)
 	}
 
-	if settings.verbose {
-		Log("Settings: %v", settings)
-	}
-
 	if settings.singleThread {
 		settings.maxParallelTasks = 1
 	}
@@ -72,7 +73,6 @@ func ParseArguments() {
 		fatal("--maxParallelTasks must be 1 or more")
 	}
 
-	if settings.dryRun {
-		Log("Dry run mode enabled")
-	}
+	// special override when we know the ncurses based output is not active
+	settings.consoleOutputAllowed = settings.reportSizes
 }

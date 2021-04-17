@@ -2,6 +2,7 @@ package varchive
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math"
 	"os"
@@ -23,9 +24,29 @@ func invoke(command string, args []string) string {
 	}
 
 	if ! settings.dryRun {
-		output, err := exec.Command(command, args...).Output()
+		command := exec.Command(command, args...)
+		stderr, err := command.StderrPipe()
 
-		if err == nil {
+		if err != nil {
+			fatal(err.Error())
+		}
+
+		if err := command.Start(); err != nil {
+			fatal(err.Error())
+		}
+
+		slurp, _ := io.ReadAll(stderr)
+		//fmt.Printf("%s\n", slurp)
+
+		if err := command.Wait(); err != nil {
+			fatal(err.Error())
+		}
+	
+		return string(slurp)
+	}
+	return ""
+}
+	/*if err == nil {
 			if settings.verbose {
 				Log("Return ok, stdout: %v", string(output))
 			}
@@ -34,10 +55,10 @@ func invoke(command string, args []string) string {
 			Log("Failed: %s %s\nErr: %v\nStdout: %v",
 				command, strings.Join(args, ` `), err, string(output))
 		}
-	}
+	}*/
 	
-	return ""
-}
+	//return ""
+
 
 func createOutputRootIfRequired() {
 	if _, err := os.Stat(settings.outputRoot); err != nil {

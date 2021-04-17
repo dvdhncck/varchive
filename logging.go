@@ -7,7 +7,7 @@ import (
 )
 
 func Log(message string, variables ...interface{}) {
-	if settings.logToFile != "" {
+	if settings.consoleOutputAllowed || settings.logToFile != "" {
 		if len(variables) == 0 {
 			log.Println(message)
 		} else {
