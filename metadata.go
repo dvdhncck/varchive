@@ -45,7 +45,7 @@ func GetFfProbeOutputParser() string {
 	dimCapture := `(?P<width>\d+)x(?P<height>\d+)` // integer dimension, e.g. 100x200
 	fpsCapture := `(?P<fps>(?:[0-9]*[.])?[0-9]+)`  // floating point, e.g. xx.yyy or xx or .yyy
 	tbrCapture := `(?P<tbr>(?:[0-9]*[.])?[0-9]+)`  // ditto
-	return prefix + dimCapture + `\ \[SAR.+\ ` + fpsCapture + `\ fps\,\ ` + tbrCapture + `\ tbr.+`
+	return prefix + dimCapture + `\,.+?` + fpsCapture + `\ fps\,\ ` + tbrCapture + `\ tbr.+`
 }
 
 func parseFfProbeMetadata(lines []string) (VideoInfo, error) {
