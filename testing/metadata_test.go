@@ -29,13 +29,13 @@ func Test_regexCapturing(t *testing.T) {
 		t.Fatal(`width wrong`)
 	}
 	if matches[2] != `320` {
-		t.Fatal(`width wrong`)
+		t.Fatal(`height wrong`)
 	}
 	if matches[3] != `25.52` {
-		t.Fatal(`width wrong`)
+		t.Fatal(`fps wrong`)
 	}
 	if matches[4] != `24.99` {
-		t.Fatal(`width wrong`)
+		t.Fatal(`tbr wrong`)
 	}
 
 }
