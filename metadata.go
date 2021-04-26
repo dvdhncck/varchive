@@ -36,24 +36,24 @@ func GetVideoInfoUsingFfProbe(path string) (VideoInfo, error) {
 	output := invoke("ffprobe", args)
 	lines := strings.Split(output, "\n")
 
-	return parseFfProbeMetadata(lines)
+	return ParseVideoInfoFromFfProbe(lines)
 }
 
-// :TODO: move to static block
-func GetFfProbeOutputParser() string {
+// :TODO: move to static block?
+func getFfProbeOutputParser() string {
 	prefix := `Stream\ \#.+Video.+?`
-	dimCapture := `(?P<width>\d+)x(?P<height>\d+)` // integer dimension, e.g. 100x200
-	fpsCapture := `(?P<fps>(?:[0-9]*[.])?[0-9]+)`  // floating point, e.g. xx.yyy or xx or .yyy
-	tbrCapture := `(?P<tbr>(?:[0-9]*[.])?[0-9]+)`  // ditto
-	return prefix + dimCapture + `\,.+?` + fpsCapture + `\ fps\,\ ` + tbrCapture + `\ tbr.+`
+	dimCapture := `(?P<width>\d{2,})x(?P<height>\d{2,})[,\ ]` // integer dimension, e.g. 100x200, must have at least 2 digits per dimension and be followed by whitespace
+	
+	fpsCapture := `(?P<fps>(?:[0-9]+\.)?[0-9]+)`  // floating point, e.g. xx.yyy or xx or .yyy
+	tbrCapture := `(?P<tbr>(?:[0-9]+\.)?[0-9]+)`  // ditto
+
+	return prefix + dimCapture + `.+\ ` + fpsCapture + `\ fps\,\ ` + tbrCapture + `\ tbr.+`
 }
 
-func parseFfProbeMetadata(lines []string) (VideoInfo, error) {
-
-	r := regexp.MustCompile(GetFfProbeOutputParser())
+func ParseVideoInfoFromFfProbe(lines []string) (VideoInfo, error) {
+	r := regexp.MustCompile(getFfProbeOutputParser())
 
 	for _, line := range lines {
-
 		matches := r.FindStringSubmatch(line)
 
 		if matches != nil {
@@ -64,5 +64,6 @@ func parseFfProbeMetadata(lines []string) (VideoInfo, error) {
 			return VideoInfo{width, height, fps, tbr}, nil
 		}
 	}
+
 	return VideoInfo{}, errors.New("parse failed")
 }
