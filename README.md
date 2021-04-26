@@ -18,6 +18,10 @@ go get github.com/rthornton128/goncurses
 
 sudo ln -s /home/dave/projects/go/pkg/mod/pkg/mod/github.com/rthornton128/goncurses@v0.0.0-20210302221415-1355ee05acae /usr/local/go/src/goncurses
 
+and then next time I updated.... 
+unset GOROOT
+sudo ln -s /home/dave/projects/go/pkg/mod/pkg/mod/github.com/rthornton128/goncurses@v0.0.0-20210302221415-1355ee05acae /usr/lib/go-1.16/src/goncurses
+
 
 Workflow
 

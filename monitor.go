@@ -76,6 +76,9 @@ func NewMonitor(timer Timer, tasks []*Task, display Display) *Monitor {
 	estimator := Estimator{[TaskTypeCount]float64{}, [TaskTypeCount]float64{}, [TaskTypeCount]float64{}}
 	stats := Stats{len(tasks), 0, 0, 0}
 
+	// estimates that came from a very long encoding session
+	// 30.6 MiB kps, Transcode 100.0 KiB
+
 	m := &Monitor{timer, sync.Mutex{}, activeTasks, display, messages, stats, estimator}
 
 	for i := 0; i < maxMessages; i++ {
