@@ -6,20 +6,11 @@ import (
 )
 
 type Histo struct {
-	min, max int64
 	counts   map[string]int64
 }
 
 func NewHisto() *Histo {
-	return &Histo{0, 0, make(map[string]int64)}
-}
-
-func (h *Histo) Min() int64 {
-	return h.min
-}
-
-func (h *Histo) Max() int64 {
-	return h.max
+	return &Histo{make(map[string]int64)}
 }
 
 func (h *Histo) Add(key string) {
