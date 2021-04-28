@@ -14,11 +14,10 @@ func ScheduleTasks(timer Timer, tasks []*Task) {
 	startTime := timer.Now()
 	waitGroup := new(sync.WaitGroup)
 	guard := make(chan int, settings.maxParallelTasks)
-
-	m := NewMonitor(timer, tasks, getSuitableDisplay())
+	m := NewMonitor(timer, NewEstimator(), tasks, getSuitableDisplay())
 
 	m.Start()
-	
+
 	for !completed {
 
 		guard <- 1 // blocks if the channel is full (i.e. enough go routines are running)
@@ -36,7 +35,7 @@ func ScheduleTasks(timer Timer, tasks []*Task) {
 				m.NotifyTaskBegins(task)
 
 				ExecuteTask(task)
-				
+
 				task.taskState = Complete
 
 				m.NotifyTaskEnds(task)
@@ -81,7 +80,7 @@ func findFirstRunnableTask(tasks []*Task) *Task {
 
 func confirmThatAllTasksAreCompleted(tasks []*Task) bool {
 	for _, task := range tasks {
-		if task.isNotCompleted() {
+		if task.IsNotCompleted() {
 			return false
 		}
 	}

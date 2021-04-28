@@ -9,6 +9,7 @@ import (
 )
 
 const TASK = 1
+const MIBIBYTES = 1000 * 1000
 
 func Test_estimationAfterOneTask(t *testing.T) {
 
@@ -16,7 +17,8 @@ func Test_estimationAfterOneTask(t *testing.T) {
 	tasks := []*varchive.Task{task1}
 
 	timer := NewDeterministicTimer()
-	m := varchive.NewMonitor(timer, tasks, varchive.NewNoOpDisplay())
+	e := varchive.NewEstimator()
+	m := varchive.NewMonitor(timer, e, tasks, varchive.NewNoOpDisplay())
 	m.Start()
 
 	m.NotifyTaskBegins(task1)
@@ -24,7 +26,7 @@ func Test_estimationAfterOneTask(t *testing.T) {
 	m.NotifyTaskEnds(task1)
 
 	expected := 3000.0 / 6.0
-	actual := m.EstimateBytesPerSecond(TASK)
+	actual := e.EstimateBytesPerSecond(TASK)
 
 	assertEqual(t, "estimate after 1 task", expected, actual)
 }
@@ -40,7 +42,8 @@ func Test_estimationAfterTwoSerialTasks(t *testing.T) {
 
 	timer := NewDeterministicTimer()
 
-	m := varchive.NewMonitor(timer, tasks, varchive.NewNoOpDisplay())
+	e := varchive.NewEstimator()
+	m := varchive.NewMonitor(timer, e, tasks, varchive.NewNoOpDisplay())
 	m.Start()
 
 	m.NotifyTaskBegins(task1)
@@ -72,7 +75,7 @@ func Test_estimationAfterTwoSerialTasks(t *testing.T) {
 
 	// after task 2 completes, we update the estimate to include the new data 
 	expected = (3000.0 + 2000.0) / (6.0 + 3.0)
-	actual = m.EstimateBytesPerSecond(TASK)
+	actual = e.EstimateBytesPerSecond(TASK)
 
 	assertEqual(t, "estimate after 2 tasks", expected, actual)
 }
@@ -86,7 +89,8 @@ func Test_estimationAfterTwoParallelTasks(t *testing.T) {
 
 	timer := NewDeterministicTimer()
 
-	m := varchive.NewMonitor(timer, tasks, varchive.NewNoOpDisplay())
+	e := varchive.NewEstimator()
+	m := varchive.NewMonitor(timer, e, tasks, varchive.NewNoOpDisplay())
 	m.Start()
 
 	m.NotifyTaskBegins(task1)
@@ -100,7 +104,7 @@ func Test_estimationAfterTwoParallelTasks(t *testing.T) {
 	// of one task on its own would be double that of that seen with 2 in parallel
 
 	expected := (3000.0 / 6.0) * 2  
-	actual := m.EstimateBytesPerSecond(TASK)
+	actual := e.EstimateBytesPerSecond(TASK)
 
 	assertEqual(t, "estimate after 2 tasks", expected, actual)
 }
@@ -111,7 +115,8 @@ func Test_estimationWhenTaskIsOverrunning(t *testing.T) {
 	tasks := []*varchive.Task{task1, task2}
 	
 	timer := NewDeterministicTimer()
-	m := varchive.NewMonitor(timer, tasks, varchive.NewNoOpDisplay())
+	e := varchive.NewEstimator()
+	m := varchive.NewMonitor(timer, e, tasks, varchive.NewNoOpDisplay())
 	m.Start() 
 
 	m.NotifyTaskBegins(task1)
@@ -129,21 +134,40 @@ func Test_estimationWhenTaskIsOverrunning(t *testing.T) {
 	assertEqual(t, "estimate when task is overrunning", expected, actual)
 }
 
-
-func Test_estimationWhenNoDataAvailable(t *testing.T) {
-	task1 := varchive.NewTask(TASK, "", "", 3000)
-	tasks := []*varchive.Task{task1}
+func Test_estimationOfRemainingRunTime(t *testing.T) {
+	task1 := varchive.NewTask(TASK, "", "", 1 * MIBIBYTES)
+	task2 := varchive.NewTask(TASK, "", "", 2 * MIBIBYTES)
+	task3 := varchive.NewTask(TASK, "", "", 3 * MIBIBYTES)
+	tasks := []*varchive.Task{task1, task2, task3}
+	
 	timer := NewDeterministicTimer()
-	
-	m := varchive.NewMonitor(timer, tasks, varchive.NewNoOpDisplay())
-	m.Start()
-	
-	m.NotifyTaskBegins(task1)
+	e := varchive.NewEstimator()
+	m := varchive.NewMonitor(timer, e, tasks, varchive.NewNoOpDisplay())
+	m.Start() 
 
-	// we don't have an estimate yet as no tasks have completed
-	expected := math.Inf(+1) 
-	actual := m.EstimateTimeRemaining(task1)
-	assertEqual(t, "estimate with no available data", expected, actual)
+
+	runTimeSeconds := e.EstimateRemainingRunTime(tasks)
+	// cost_per_MB is initially 10, so estimate is: (1+2+3) * 10
+	assertEqual(t, "estimate total time for all tasks", true, runTimeSeconds == 60)
+
+	m.NotifyTaskBegins(task1)
+	timer.AdvanceSeconds(20)
+	task1.MarkAsCompleted()
+	m.NotifyTaskEnds(task1)    
+	runTimeSeconds = e.EstimateRemainingRunTime(tasks)
+	// first task was slow, cost_per_MB is now 20/1, estimate is: (2+3) * (20/1)
+	assertEqual(t, "estimate total time for all tasks", true, runTimeSeconds == 100)
+
+
+	m.NotifyTaskBegins(task2)
+	timer.AdvanceSeconds(5)
+	task2.MarkAsCompleted()
+	m.NotifyTaskEnds(task2)    
+	runTimeSeconds = e.EstimateRemainingRunTime(tasks)
+
+	// cost_per_MB is now  25_seconds/3_mb, estimate is: 3_mb * cost_per_MB, i.e. 3 * (25/3)
+	assertEqual(t, "estimate total time for all tasks", true, runTimeSeconds == 25)
+
 }
 
 func assertEqual(t *testing.T, message string, expected interface{}, actual interface{}) {

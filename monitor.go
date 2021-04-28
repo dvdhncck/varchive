@@ -2,7 +2,6 @@ package varchive
 
 import (
 	"fmt"
-	"math"
 	"sync"
 )
 
@@ -15,20 +14,15 @@ type Stats struct {
 	totalRunTimeInSeconds float64
 }
 
-type Estimator struct {
-	totalInputSize          [TaskTypeCount]float64 // cumulative for all completed tasks of this type
-	totalRunTime            [TaskTypeCount]float64 // ditto
-	estimatedBytesPerSecond [TaskTypeCount]float64
-}
-
 type Monitor struct {
 	timer       Timer
 	lock        sync.Mutex
+	allTasks    []*Task
 	activeTasks []*Task
 	display     Display
 	messages    [maxMessages]*string
 	stats       Stats
-	estimator   Estimator
+	estimator   *Estimator
 }
 
 func (m *Monitor) ShutdownCleanly() {
@@ -70,16 +64,17 @@ func (m *Monitor) NotifyTaskEnds(task *Task) {
 	}
 }
 
-func NewMonitor(timer Timer, tasks []*Task, display Display) *Monitor {
-	activeTasks := []*Task{}
-	messages := [maxMessages]*string{}
-	estimator := Estimator{[TaskTypeCount]float64{}, [TaskTypeCount]float64{}, [TaskTypeCount]float64{}}
-	stats := Stats{len(tasks), 0, 0, 0}
-
-	// estimates that came from a very long encoding session
-	// 30.6 MiB kps, Transcode 100.0 KiB
-
-	m := &Monitor{timer, sync.Mutex{}, activeTasks, display, messages, stats, estimator}
+func NewMonitor(timer Timer, estimator *Estimator, allTasks []*Task, display Display) *Monitor {
+	m := &Monitor{
+		timer:       timer, 
+		lock:        sync.Mutex{}, 
+		allTasks:    allTasks, 
+		activeTasks: []*Task{}, 
+		display:     display, 
+		messages:    [maxMessages]*string{}, 
+		stats:       Stats{len(allTasks), 0, 0, 0},
+		estimator:   estimator,
+	}
 
 	for i := 0; i < maxMessages; i++ {
 		text := "..."
@@ -111,8 +106,10 @@ func (m *Monitor) tick(runTimeInSecond float64) {
 
 	m.display.Clear()
 
-	m.display.Write(fmt.Sprintf("%d beavers employed, %d tasks completed, %d remaining\n",
-		len(m.activeTasks), m.stats.tasksCompleted, m.stats.tasksRemaining))
+	remainingTime := m.estimator.EstimateRemainingRunTime(m.allTasks);
+
+	m.display.Write(fmt.Sprintf("running %s, remaining %s, %d beavers employed, %d tasks completed, %d remaining\n",
+	niceTime(runTimeInSecond), niceTime(remainingTime), len(m.activeTasks), m.stats.tasksCompleted, m.stats.tasksRemaining))
 	m.display.Write("Task     Purpose       Size          Run time        ETA")
 	m.display.Write("-------+------------+-------------+---------------+----------------")
 
@@ -120,12 +117,15 @@ func (m *Monitor) tick(runTimeInSecond float64) {
 
 		task.runTimeInSeconds = m.timer.SecondsSince(task.startTimestamp)
 
+		workersOfThisType := m.countWorkersOfType(task.taskType)
+	    remaining := m.estimator.EstimateTimeRemaining(task, workersOfThisType)
+
 		m.display.Write(fmt.Sprintf("%4d    %-13s%11s   %-16s%-16s",
 			task.id,
 			task.TaskType(),
 			task.Size(),
 			niceTime(task.runTimeInSeconds),
-			niceTime(m.EstimateTimeRemaining(task))))
+			niceTime(remaining)))
 	}
 
 	m.display.Write(fmt.Sprintf("\nElapsed: %s", niceTime(runTimeInSecond)))
@@ -160,54 +160,21 @@ func (m *Monitor) countWorkersOfType(taskType TaskType) int {
 
 // called when a worker completes a task (and before any new task is scheduled)
 func (m *Monitor) updateEstimates(task *Task) {
-	e := &m.estimator
-
-
-	// how accurate was the last estimate?
-	estimated := m.EstimateRuntime(task)
-	actual := task.runTimeInSeconds
-	error := math.Abs(estimated - actual) / actual   // bigger values are worse
-	Log("Estimation error: %.2f  (e=%f, a=%f)", error, estimated, actual)
 	
 	workersOfThisType := m.countWorkersOfType(task.taskType)
+	m.estimator.UpdateEstimates(task, workersOfThisType)
 
-	taskType := task.taskType
-
-	e.totalInputSize[taskType] += float64(task.inputSize)
-	e.totalRunTime[taskType] += float64(task.runTimeInSeconds)
-
-	ebpsAllWorkers := e.totalInputSize[taskType] / e.totalRunTime[taskType]
-
-	e.estimatedBytesPerSecond[taskType] = ebpsAllWorkers * float64(workersOfThisType)
-
-	m.addMessage(fmt.Sprintf("Estimates computed: FixAudio %s kps, Transcode %s kps",
-		niceSize(int64(e.estimatedBytesPerSecond[FixAudio])),
-		niceSize(int64(e.estimatedBytesPerSecond[Transcode]))))
-}
-
-func (m *Monitor) EstimateBytesPerSecond(taskType TaskType) float64 {
-	return m.estimator.estimatedBytesPerSecond[taskType]
-}
-
-func(m *Monitor) EstimateRuntime(task *Task) float64 {
-	workersOfThisType := m.countWorkersOfType(task.taskType)
-
-	bpsForThisWorker := m.EstimateBytesPerSecond(task.taskType) / float64(workersOfThisType)
-
-	estimatedTotalTimeInSeconds := float64(task.inputSize) / bpsForThisWorker
-	
-	return estimatedTotalTimeInSeconds
+	m.addMessage(fmt.Sprintf("Estimates computed: FixAudio %s/s, Transcode %s/s",
+		niceSize(int64(m.estimator.EstimateBytesPerSecond(FixAudio))),
+		niceSize(int64(m.estimator.EstimateBytesPerSecond(Transcode)))))
 }
 
 // returns the estimate of how much longer this task will take
 // or -Inf if the task is taking longer than expected
 // or +Inf if there is no data available to make the estimation
+
 func (m *Monitor) EstimateTimeRemaining(task *Task) float64 {
-	remainingTimeInSeconds := m.EstimateRuntime(task) - task.runTimeInSeconds
-
-	if remainingTimeInSeconds < 0 {
-		return math.Inf(-1)
-	}
-
-	return remainingTimeInSeconds
+	workersOfThisType := m.countWorkersOfType(task.taskType)
+	return m.estimator.EstimateTimeRemaining(task, workersOfThisType)
 }
+

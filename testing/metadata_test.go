@@ -27,8 +27,8 @@ func Test_ffProbeOutputCapture(t *testing.T) {
 		`Stream #0:0[0x1e0]: Video: mpeg1video, yuv420p(tv), 640x320 [SAR 1:1 DAR 2:1], 104857 kb/s, 25.52 fps, 24.99 tbr,...`,
 		// this one doesnt have the aspect ratio part '[SAR 1:1 DAR 2:1]'
 		`Stream #0:0[0x1e0]: Video: mpeg1video, yuv420p(tv), 200x17 [foo], 104857 kb/s, 1.23 fps, 0.99 tbr,...`,
-
 	}
+	
 	expected := []varchive.VideoInfo{
 		{Width: 1920, Height: 1080, Fps: 125, Tbr: 50},
 		{Width: 640, Height: 320, Fps: 25.52, Tbr: 24.99},

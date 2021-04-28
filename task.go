@@ -55,9 +55,14 @@ func NewTask(taskType TaskType, fileIn string, fileOut string, inputSize int64) 
 	return &task
 }
 
-func (t *Task) isNotCompleted() bool {
+func (t *Task) IsNotCompleted() bool {
 	return t.taskState != Complete
 }
+
+func (t *Task) MarkAsCompleted()  {
+	t.taskState = Complete
+}
+
 
 func (t1 *Task) lessThan(t2 *Task) bool {
 	if t1.taskType == t2.taskType {
