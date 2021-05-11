@@ -5,7 +5,9 @@ import (
 	"sync"
 )
 
-const maxMessages = 8
+const maxMessages = 16
+
+var ellipsis = string(`...`)
 
 type Stats struct {
 	tasksRemaining        int
@@ -27,7 +29,9 @@ type Monitor struct {
 
 func (m *Monitor) ShutdownCleanly() {
 	Log("Clean shutdown requested")
-	m.display.Close()
+	if settings.liveDisplay {
+		m.display.Close()
+	}
 }
 
 func (m *Monitor) NotifyTaskBegins(task *Task) {
@@ -46,7 +50,7 @@ func (m *Monitor) NotifyTaskEnds(task *Task) {
 
 	for index, t := range m.activeTasks {
 		if t.id == task.id {
-						
+
 			bytesPerSecondForTask := int64(float64(task.inputSize) / float64(task.runTimeInSeconds))
 
 			m.addMessage(fmt.Sprintf("Completed task %s in %v (%v/s)",
@@ -66,12 +70,12 @@ func (m *Monitor) NotifyTaskEnds(task *Task) {
 
 func NewMonitor(timer Timer, estimator *Estimator, allTasks []*Task, display Display) *Monitor {
 	m := &Monitor{
-		timer:       timer, 
-		lock:        sync.Mutex{}, 
-		allTasks:    allTasks, 
-		activeTasks: []*Task{}, 
-		display:     display, 
-		messages:    [maxMessages]*string{}, 
+		timer:       timer,
+		lock:        sync.Mutex{},
+		allTasks:    allTasks,
+		activeTasks: []*Task{},
+		display:     display,
+		messages:    [maxMessages]*string{},
 		stats:       Stats{len(allTasks), 0, 0, 0},
 		estimator:   estimator,
 	}
@@ -85,50 +89,53 @@ func NewMonitor(timer Timer, estimator *Estimator, allTasks []*Task, display Dis
 }
 
 func (m *Monitor) Start() {
-	m.display.Init()
-	m.display.Clear()
+	if settings.liveDisplay {
+		m.display.Init()
+		m.display.Clear()
 
-	go func(monitor *Monitor) {
+		go func(monitor *Monitor) {
 
-		startTimestamp := monitor.timer.Now()
+			startTimestamp := monitor.timer.Now()
 
-		for {
-			runTime := monitor.timer.SecondsSince(startTimestamp)
-			monitor.tick(runTime)
-			monitor.timer.MilliSleep(900)
-		}
-	}(m)
+			for {
+				runTime := monitor.timer.SecondsSince(startTimestamp)
+				monitor.tick(runTime)
+				monitor.timer.MilliSleep(900)
+			}
+		}(m)
+	}
 }
 
 func (m *Monitor) tick(runTimeInSecond float64) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	totalRemainingTimeInSeconds := m.estimator.EstimateRemainingRunTime(m.allTasks)
+
+	for _, task := range m.activeTasks {
+		workersOfThisType := m.countWorkersOfType(task.taskType)
+		task.runTimeInSeconds = m.timer.SecondsSince(task.startTimestamp)
+		task.estimatedRemainingTimeInSeconds = m.estimator.EstimateTimeRemaining(task, workersOfThisType)
+
+		totalRemainingTimeInSeconds += task.estimatedRemainingTimeInSeconds
+	}
+
 	m.display.Clear()
 
-	remainingTime := m.estimator.EstimateRemainingRunTime(m.allTasks);
+	m.display.Write(fmt.Sprintf("Elapsed: %s, remaining: %s\n", niceTime(runTimeInSecond), niceTime(totalRemainingTimeInSeconds)))
+	m.display.Write(fmt.Sprintf("%d beavers employed, %d tasks completed, %d remaining\n", len(m.activeTasks), m.stats.tasksCompleted, m.stats.tasksRemaining))
 
-	m.display.Write(fmt.Sprintf("running %s, remaining %s, %d beavers employed, %d tasks completed, %d remaining\n",
-	niceTime(runTimeInSecond), niceTime(remainingTime), len(m.activeTasks), m.stats.tasksCompleted, m.stats.tasksRemaining))
 	m.display.Write("Task     Purpose       Size          Run time        ETA")
 	m.display.Write("-------+------------+-------------+---------------+----------------")
 
 	for _, task := range m.activeTasks {
-
-		task.runTimeInSeconds = m.timer.SecondsSince(task.startTimestamp)
-
-		workersOfThisType := m.countWorkersOfType(task.taskType)
-	    remaining := m.estimator.EstimateTimeRemaining(task, workersOfThisType)
-
 		m.display.Write(fmt.Sprintf("%4d    %-13s%11s   %-16s%-16s",
 			task.id,
 			task.TaskType(),
 			task.Size(),
 			niceTime(task.runTimeInSeconds),
-			niceTime(remaining)))
+			niceTime(task.estimatedRemainingTimeInSeconds)))
 	}
-
-	m.display.Write(fmt.Sprintf("\nElapsed: %s", niceTime(runTimeInSecond)))
 
 	m.display.Write("\nRecently:")
 	for _, message := range m.messages {
@@ -136,16 +143,18 @@ func (m *Monitor) tick(runTimeInSecond float64) {
 	}
 
 	m.display.Flush()
+
 }
 
 func (m *Monitor) addMessage(message string) {
 	Log(message) // the permanent record
-	
-	for i := maxMessages - 1; i > 0; i-- {
+
+	last := maxMessages - 1
+	for i := last - 1; i > 0; i-- {
 		m.messages[i] = m.messages[i-1]
 	}
+	m.messages[last] = &ellipsis
 	m.messages[0] = &message
-	//m.messages[maxMessages - 1] = "..."
 }
 
 func (m *Monitor) countWorkersOfType(taskType TaskType) int {
@@ -160,7 +169,7 @@ func (m *Monitor) countWorkersOfType(taskType TaskType) int {
 
 // called when a worker completes a task (and before any new task is scheduled)
 func (m *Monitor) updateEstimates(task *Task) {
-	
+
 	workersOfThisType := m.countWorkersOfType(task.taskType)
 	m.estimator.UpdateEstimates(task, workersOfThisType)
 
@@ -177,4 +186,3 @@ func (m *Monitor) EstimateTimeRemaining(task *Task) float64 {
 	workersOfThisType := m.countWorkersOfType(task.taskType)
 	return m.estimator.EstimateTimeRemaining(task, workersOfThisType)
 }
-

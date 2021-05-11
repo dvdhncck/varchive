@@ -29,6 +29,7 @@ type Task struct {
 
 	startTimestamp   Timestamp
 	runTimeInSeconds float64
+	estimatedRemainingTimeInSeconds float64
 
 	taskState TaskState
 	taskType  TaskType
@@ -50,9 +51,21 @@ func (t *Task) addDependants(others []*Task) {
 var taskId = 1
 
 func NewTask(taskType TaskType, fileIn string, fileOut string, inputSize int64) *Task {
-	task := Task{taskId, inputSize, time.Time{}, 0, Pending, taskType, fileIn, fileOut, []*Task{}}
+	task := Task{taskId, inputSize, time.Time{}, 0, 0, Pending, taskType, fileIn, fileOut, []*Task{}}
 	taskId += 1
 	return &task
+}
+
+func (t *Task) EstimatedRemainingTimeInSeconds() float64 {
+	return t.estimatedRemainingTimeInSeconds
+}
+
+func (t *Task) IsRunning() bool {
+	return t.taskState == Running
+}
+
+func (t *Task) IsPending() bool {
+	return t.taskState == Pending
 }
 
 func (t *Task) IsNotCompleted() bool {

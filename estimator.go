@@ -14,8 +14,9 @@ func NewEstimator() *Estimator {
 	estimator := Estimator{[TaskTypeCount]float64{}, [TaskTypeCount]float64{}, [TaskTypeCount]float64{}}
 	// these estimates that came from a very long encoding session (on skink in March 2021)
 	// 30.6 MiB kps, Transcode 100.0 KiB
-	estimator.estimatedBytesPerSecond[FixAudio] = 30.6 * 1000 * 1000
-	estimator.estimatedBytesPerSecond[Transcode] = 100 * 1000
+	estimator.estimatedBytesPerSecond[Concatenate] = 500.0 * 1000 * 1000
+	estimator.estimatedBytesPerSecond[FixAudio]    = 30.6 * 1000 * 1000
+	estimator.estimatedBytesPerSecond[Transcode]   = 100 * 1000
 	return &estimator
 }
 
@@ -66,12 +67,21 @@ func (e *Estimator) EstimateTimeRemaining(task *Task, workersOfThisType int) flo
 
 func (e *Estimator) EstimateRemainingRunTime(tasks []*Task) float64 {
 	totalEstimatedTime := float64(0)
+	//Log("runTime estimation starts")
+	
 	for _, task := range(tasks) {
-		if task.IsNotCompleted() {
+		if task.IsRunning() {
+			totalEstimatedTime += task.EstimatedRemainingTimeInSeconds()
+
+		}
+		if task.IsPending() {
 			bps := e.EstimateBytesPerSecond(task.taskType)
 			estimatedTime := float64(task.inputSize) / bps
+			//Log("%.2fs for task %v (@%vps)", estimatedTime, task.BriefString(), niceSize(int64(bps)))
+			//Log("runTime estimation is %.2f", totalEstimatedTime)
 			totalEstimatedTime += estimatedTime
 		}
-	}
-	return float64(totalEstimatedTime)
+	}	
+	Log("runTime estimation is %.2f", totalEstimatedTime)
+	return totalEstimatedTime / float64(settings.maxParallelTasks)
 }

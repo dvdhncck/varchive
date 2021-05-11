@@ -13,6 +13,7 @@ type Settings struct {
 	outputRoot           string
 	logToFile            string
 	consoleOutputAllowed bool
+	liveDisplay          bool
 	singleThread         bool
 	maxParallelTasks     int
 	width                string
@@ -31,6 +32,8 @@ func ParseArguments() {
 	flag.BoolVar(&settings.verbose, "verbose", false, "be verbose")
 	flag.BoolVar(&settings.dryRun, "dryRun", false, "don't affect anything")
 	flag.BoolVar(&settings.singleThread, "singleThread", false, "do not parallelise tasks")
+
+	flag.BoolVar(&settings.liveDisplay, "liveDisplay", true, "ncurses-based visual progress updates")
 
 	flag.IntVar(&settings.maxParallelTasks, "maxParallelTasks", 4, "maximum number of tasks to have running at any one time.\n")
 
@@ -74,5 +77,5 @@ func ParseArguments() {
 	}
 
 	// special override when we know the ncurses based output is not active
-	settings.consoleOutputAllowed = settings.reportSizes
+	settings.consoleOutputAllowed = settings.reportSizes || !settings.liveDisplay
 }
